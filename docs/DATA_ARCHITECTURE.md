@@ -140,17 +140,16 @@ memory_service = VertexAiMemoryBankService(
 ### Core Tables
 
 ```sql
--- Players (unchanged)
+-- Players
 CREATE TABLE players (
     id UUID PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
-    telegram_id BIGINT UNIQUE,
-    telegram_username TEXT,
+    phone TEXT UNIQUE,  -- E.164 format: +1234567890
     timezone TEXT DEFAULT 'UTC',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     game_started_at TIMESTAMPTZ,  -- When player clicked "Start Game"
     email_verified BOOLEAN DEFAULT FALSE,
-    telegram_verified BOOLEAN DEFAULT FALSE
+    phone_verified BOOLEAN DEFAULT FALSE
 );
 
 -- Player Keys (with access limit)
@@ -247,7 +246,7 @@ CREATE TABLE messages (
     id UUID PRIMARY KEY,
     player_id UUID REFERENCES players(id),
     agent_id TEXT,  -- NULL for system messages, 'ember'/'miro' for agents
-    channel TEXT NOT NULL,  -- 'email', 'telegram', 'system'
+    channel TEXT NOT NULL,  -- 'email', 'sms', 'system'
     direction TEXT NOT NULL,  -- 'inbound', 'outbound'
     created_at TIMESTAMPTZ DEFAULT NOW(),
 

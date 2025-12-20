@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 
 from argent.api.health import router as health_router
+from argent.api.webhooks import router as webhooks_router
 from argent.config import get_settings
 
 settings = get_settings()
@@ -17,6 +18,7 @@ app = FastAPI(
 
 # Include routers
 app.include_router(health_router)
+app.include_router(webhooks_router)
 
 
 @app.get("/")

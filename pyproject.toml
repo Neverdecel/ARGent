@@ -92,3 +92,6 @@ disallow_any_generics = false  # Allow dict instead of dict[str, Any]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: marks tests that require external services (deselect with '-m \"not integration\"')",
+]

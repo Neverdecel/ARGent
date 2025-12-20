@@ -6,7 +6,7 @@
 
 ```yaml
 handle: "Miro"
-channel: telegram
+channel: sms
 status: active
 introduced_by: onboarding  # Contacts player day 1, after Ember
 ```
@@ -33,9 +33,9 @@ Cool. Professional. The kind of photo someone confident would choose - not tryin
 - Film noir silhouettes - mystery without melodrama
 
 **Technical Notes:**
-- Telegram profile: 512x512px, should look good as small circle
-- Handle: Just "Miro" - no last name, no username hints
-- Bio (if visible): Empty or single word like "broker" or just "."
+- SMS-only contact - no profile image, just a phone number
+- No caller ID name set - appears as unknown number initially
+- Adds to immersion: feels like a real contact reaching out
 
 ---
 

@@ -22,7 +22,8 @@ This document maps our requirements to specific technology decisions, explaining
 | **Trigger Engine** | Custom evaluator (MVP) | Condition-based triggers (`trust >= 30 AND days >= 2`) |
 | **Landing/Registration** | FastAPI + Jinja2 | Simple server-rendered pages, no frontend framework |
 | **Story Pages** | Separate simple apps | Built per subdomain as story requires |
-| **Email Service** | Transactional (Mailgun/Resend) | Deliverability + inbound webhooks |
+| **Email Service** | Mailgun | Deliverability + inbound webhooks |
+| **SMS Service** | Twilio | Reliable SMS delivery + inbound webhooks |
 | **Containerization** | Docker + Docker Compose | Single-command deployment, self-hostable |
 
 **Hosting Model:** Hybrid - Self-host core infrastructure (app, DB, Redis), use Google Cloud for AI services (Gemini API, Memory Bank).
@@ -50,9 +51,9 @@ This document maps our requirements to specific technology decisions, explaining
 │                                                                              │
 │  EXTERNAL SERVICES (webhooks into our API)                                  │
 │  ┌─────────────────┐     ┌─────────────────┐                                │
-│  │  Email Service  │     │  Telegram Bot   │                                │
-│  │  (Mailgun/etc)  │     │  API            │                                │
-│  │  - Send emails  │     │  - Miro bot     │                                │
+│  │  Email Service  │     │  SMS Service    │                                │
+│  │  (Mailgun)      │     │  (Twilio)       │                                │
+│  │  - Send emails  │     │  - Send SMS     │                                │
 │  │  - Inbound hook │     │  - Inbound hook │                                │
 │  └────────┬────────┘     └────────┬────────┘                                │
 │           │                       │                                          │
@@ -126,7 +127,7 @@ ADK handles individual agent conversations. The **Story Engine** coordinates the
 │         ▼                  ▼                  ▼             │
 │  ┌────────────┐     ┌────────────┐     ┌────────────┐      │
 │  │   Ember    │     │    Miro    │     │   Future   │      │
-│  │  (Email)   │     │ (Telegram) │     │   Agents   │      │
+│  │  (Email)   │     │   (SMS)    │     │   Agents   │      │
 │  └────────────┘     └────────────┘     └────────────┘      │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -363,23 +364,22 @@ class TriggerEvaluator:
 | Templating | Jinja2 | HTML email templates |
 | Parsing | `mail-parser` | Extract reply content from threads |
 
-### Telegram
+### SMS (Twilio)
 
 | Feature | Implementation |
 |---------|----------------|
-| One bot per agent | Separate bot token per character |
-| Webhooks | FastAPI endpoints per bot |
-| Typing indicator | `send_chat_action("typing")` before message |
-| Media | Native support for images, documents |
-| Deep linking | `t.me/bot_name?start=player_token` for onboarding |
+| Phone number | Dedicated Twilio number for Miro agent |
+| Webhooks | FastAPI endpoint `/webhook/twilio` |
+| Inbound SMS | Twilio POSTs form data with signature |
+| MMS support | Media URLs for images/documents |
+| Signature verification | HMAC-SHA1 with auth token |
 
-**Bot Architecture:**
+**Webhook Architecture:**
 ```
 ┌─────────────────────────────────────────┐
 │  FastAPI Server                         │
-│  ├─ /webhook/elena    → Elena Bot       │
-│  ├─ /webhook/marcus   → Marcus Bot      │
-│  ├─ /webhook/agent3   → Agent3 Bot      │
+│  ├─ /webhook/mailgun  → Email (Ember)   │
+│  ├─ /webhook/twilio   → SMS (Miro)      │
 │  └─ ...                                 │
 └─────────────────────────────────────────┘
 ```
@@ -538,7 +538,8 @@ services:
       - REDIS_URL=redis://redis:6379
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - MAILGUN_API_KEY=${MAILGUN_API_KEY}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
     depends_on:
       - postgres
       - redis
@@ -587,7 +588,8 @@ volumes:
 | Web UI | Jinja2 templates | Next.js, HTMX | Simplest for landing/registration pages |
 | Queue | Huey | Celery, RQ, Dramatiq | Lightweight, built-in scheduling, Redis-based |
 | Database | PostgreSQL | MongoDB, SQLite | Relational model fits our data, JSONB flexibility |
-| Email | Mailgun/Resend | SMTP direct | Deliverability + inbound webhooks |
+| Email | Mailgun | SMTP direct | Deliverability + inbound webhooks |
+| SMS | Twilio | Other providers | Best docs, reliability, MMS support |
 
 ---
 
@@ -599,7 +601,7 @@ volumes:
 | VPS (DigitalOcean) | ~$24/month | 4GB RAM, handles 100+ players |
 | Domain | ~$12/year | For email sender domains |
 | Email (Mailgun) | Free tier | 5K emails/month |
-| Telegram | Free | Official API |
+| SMS (Twilio) | ~$0.0079/msg | Pay per message |
 
 **Estimated cost per player per month:** ~$0.50-2.00 depending on engagement
 
