@@ -1,0 +1,94 @@
+[project]
+name = "argent"
+version = "0.1.0"
+description = "ARGent - An AI-driven alternate reality game"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    # Web framework
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+
+    # Database
+    "sqlalchemy[asyncio]>=2.0.0",
+    "asyncpg>=0.30.0",
+    "psycopg2-binary>=2.9.0",  # For Alembic migrations (sync)
+    "alembic>=1.14.0",
+
+    # Redis & task queue
+    "redis>=5.0.0",
+    "huey>=2.5.0",
+
+    # Configuration
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+
+    # HTTP client (for Telegram, external APIs)
+    "httpx>=0.28.0",
+
+    # Email
+    "aiosmtplib>=3.0.0",
+
+    # Templates
+    "jinja2>=3.1.0",
+
+    # Utilities
+    "python-multipart>=0.0.9",  # Form handling
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.0",
+]
+
+# Google ADK (when ready for agent work)
+agents = [
+    "google-adk>=0.1.0",
+    "google-cloud-aiplatform>=1.70.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/argent"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # function call in default argument (required for FastAPI Depends)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["argent"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+# Relax some strict rules for pragmatic solo development
+disallow_any_generics = false  # Allow dict instead of dict[str, Any]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

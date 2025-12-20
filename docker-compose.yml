@@ -1,0 +1,74 @@
+# ARGent Docker Compose configuration
+# 4-container architecture: app, worker, postgres, redis
+
+name: argent
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://argent:${DB_PASSWORD:-argent}@postgres:5432/argent
+      - REDIS_URL=redis://redis:6379
+      - DEBUG=${DEBUG:-true}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
+      - TELEGRAM_BOT_TOKEN_EMBER=${TELEGRAM_BOT_TOKEN_EMBER:-}
+      - TELEGRAM_BOT_TOKEN_MIRO=${TELEGRAM_BOT_TOKEN_MIRO:-}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./src:/app/src:ro  # Mount source for development
+      - ./alembic:/app/alembic  # Mount alembic for migrations
+      - ./pyproject.toml:/app/pyproject.toml:ro  # Mount config for dev tools
+    command: uvicorn argent.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://argent:${DB_PASSWORD:-argent}@postgres:5432/argent
+      - REDIS_URL=redis://redis:6379
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
+      - TELEGRAM_BOT_TOKEN_EMBER=${TELEGRAM_BOT_TOKEN_EMBER:-}
+      - TELEGRAM_BOT_TOKEN_MIRO=${TELEGRAM_BOT_TOKEN_MIRO:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    # Huey worker command - will be enabled when tasks are implemented
+    command: echo "Worker placeholder - Huey tasks not yet implemented"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=argent
+      - POSTGRES_USER=argent
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-argent}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # Use 5433 to avoid conflict with host PostgreSQL
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U argent -d argent"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6380:6379"  # Use 6380 to avoid conflict with host Redis
+    command: redis-server --appendonly yes
+
+volumes:
+  postgres_data:
+  redis_data:
