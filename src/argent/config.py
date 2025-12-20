@@ -30,14 +30,18 @@ class Settings(BaseSettings):
     gcp_project: str = ""
     gcp_location: str = "us-central1"
 
-    # Email (Mailgun/Resend)
+    # Email (Mailgun)
     mailgun_api_key: str = ""
     mailgun_domain: str = ""
+    mailgun_webhook_signing_key: str = ""  # For webhook verification (may differ from API key)
     email_from: str = "noreply@argent.game"
+    email_enabled: bool = True
 
-    # Telegram
-    telegram_bot_token_ember: str = ""
-    telegram_bot_token_miro: str = ""
+    # SMS (Twilio)
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_phone_number: str = ""  # Miro's phone number (E.164 format: +1234567890)
+    sms_enabled: bool = True
 
     # Security
     secret_key: str = "change-me-in-production"

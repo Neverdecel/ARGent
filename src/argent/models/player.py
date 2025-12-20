@@ -6,7 +6,7 @@ Schema based on DATA_ARCHITECTURE.md
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, Integer, Text
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,12 +19,11 @@ class Player(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "players"
 
     email: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
-    telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True)
-    telegram_username: Mapped[str | None] = mapped_column(Text)
+    phone: Mapped[str | None] = mapped_column(Text, unique=True)  # E.164 format: +1234567890
     timezone: Mapped[str] = mapped_column(Text, default="UTC")
     game_started_at: Mapped[datetime | None] = mapped_column()
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    telegram_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Relationships
     keys: Mapped[list["PlayerKey"]] = relationship(back_populates="player")
@@ -146,6 +145,9 @@ class Message(Base, UUIDMixin, TimestampMixin):
     agent_id: Mapped[str | None] = mapped_column(Text)  # NULL for system messages
     channel: Mapped[str] = mapped_column(Text, nullable=False)  # 'email', 'telegram', 'system'
     direction: Mapped[str] = mapped_column(Text, nullable=False)  # 'inbound', 'outbound'
+
+    # External provider message ID (Mailgun Message-Id or Telegram message_id)
+    external_id: Mapped[str | None] = mapped_column(Text)
 
     # Reference to Memory Bank session
     session_id: Mapped[str | None] = mapped_column(Text)
