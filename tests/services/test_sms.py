@@ -1,16 +1,14 @@
 """Tests for SMSService (Twilio)."""
 
 import base64
-import hashlib
-import hmac
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
+from argent.services import Channel, OutboundMessage
 from argent.services.sms import SMSService
-from argent.services import OutboundMessage, Channel
 
 
 class TestSMSServiceSignature:

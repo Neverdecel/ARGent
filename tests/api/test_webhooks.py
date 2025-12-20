@@ -1,16 +1,14 @@
 """Tests for webhook endpoints."""
 
-import hashlib
-import hmac
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from argent.main import app
 from argent.api.webhooks import get_email_service, get_sms_service
 from argent.config import get_settings
 from argent.database import get_db
+from argent.main import app
 from argent.services import Channel, InboundMessage
 
 

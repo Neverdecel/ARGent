@@ -18,7 +18,6 @@ from argent.services.base import (
     OutboundMessage,
     SendError,
     SendResult,
-    SignatureVerificationError,
 )
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,6 @@ import hmac
 import logging
 from datetime import UTC, datetime
 from typing import Any
-from urllib.parse import urlencode
 
 import httpx
 

@@ -8,8 +8,8 @@ from uuid import uuid4
 
 import pytest
 
-from argent.services.email import EmailService, extract_reply_content
 from argent.services import OutboundMessage
+from argent.services.email import EmailService, extract_reply_content
 
 
 class TestExtractReplyContent:

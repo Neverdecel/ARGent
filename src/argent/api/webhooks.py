@@ -48,7 +48,7 @@ async def mailgun_webhook(
 
     # Get form data
     form_data = await request.form()
-    payload = {key: value for key, value in form_data.items()}
+    payload = dict(form_data.items())
 
     # Verify signature
     if not email_service.verify_webhook_payload(payload):
