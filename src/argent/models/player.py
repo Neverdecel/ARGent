@@ -95,7 +95,9 @@ class TrustEvent(Base, UUIDMixin, TimestampMixin):
     message_id: Mapped[Any | None] = mapped_column(UUID(as_uuid=True), ForeignKey("messages.id"))
 
     __table_args__ = (
-        Index("idx_trust_events_player_recent", "player_id", "created_at", postgresql_using="btree"),
+        Index(
+            "idx_trust_events_player_recent", "player_id", "created_at", postgresql_using="btree"
+        ),
     )
 
 
