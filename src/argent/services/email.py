@@ -137,9 +137,7 @@ class EmailService(BaseChannelService):
                 files = []
                 for att in attachments:
                     if att.data:
-                        files.append(
-                            ("attachment", (att.filename, att.data, att.content_type))
-                        )
+                        files.append(("attachment", (att.filename, att.data, att.content_type)))
                 response = await client.post(
                     f"{self._api_url}/messages",
                     data=data,
@@ -249,10 +247,7 @@ class EmailService(BaseChannelService):
             return False
 
         # Use webhook signing key if set, otherwise fall back to API key
-        signing_key = (
-            self._settings.mailgun_webhook_signing_key
-            or self._settings.mailgun_api_key
-        )
+        signing_key = self._settings.mailgun_webhook_signing_key or self._settings.mailgun_api_key
 
         expected = hmac.new(
             signing_key.encode(),
@@ -354,7 +349,7 @@ def format_ember_email(
     <meta charset="utf-8">
 </head>
 <body style="font-family: Georgia, serif; font-size: 14px; line-height: 1.6; color: #333;">
-    {content.replace(chr(10), '<br>')}
+    {content.replace(chr(10), "<br>")}
 </body>
 </html>"""
 

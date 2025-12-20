@@ -29,13 +29,15 @@ class TestMailgunWebhook:
         """Mock email service that accepts any signature."""
         service = MagicMock()
         service.verify_webhook_payload.return_value = True
-        service.parse_webhook = AsyncMock(return_value=InboundMessage(
-            external_id="<test@example.com>",
-            channel=Channel.EMAIL,
-            sender_identifier="unknown@example.com",
-            content="Hello",
-            subject="Test",
-        ))
+        service.parse_webhook = AsyncMock(
+            return_value=InboundMessage(
+                external_id="<test@example.com>",
+                channel=Channel.EMAIL,
+                sender_identifier="unknown@example.com",
+                content="Hello",
+                subject="Test",
+            )
+        )
         return service
 
     @pytest.fixture
@@ -164,12 +166,14 @@ class TestTwilioWebhook:
         """Mock SMS service that accepts signature."""
         service = MagicMock()
         service.verify_webhook_request.return_value = True
-        service.parse_webhook = AsyncMock(return_value=InboundMessage(
-            external_id="SM12345",
-            channel=Channel.SMS,
-            sender_identifier="+15559876543",
-            content="Hello Miro",
-        ))
+        service.parse_webhook = AsyncMock(
+            return_value=InboundMessage(
+                external_id="SM12345",
+                channel=Channel.SMS,
+                sender_identifier="+15559876543",
+                content="Hello Miro",
+            )
+        )
         return service
 
     @pytest.fixture
@@ -184,12 +188,14 @@ class TestTwilioWebhook:
         """Mock SMS service with empty sender."""
         service = MagicMock()
         service.verify_webhook_request.return_value = True
-        service.parse_webhook = AsyncMock(return_value=InboundMessage(
-            external_id="SM12345",
-            channel=Channel.SMS,
-            sender_identifier="",
-            content="",
-        ))
+        service.parse_webhook = AsyncMock(
+            return_value=InboundMessage(
+                external_id="SM12345",
+                channel=Channel.SMS,
+                sender_identifier="",
+                content="",
+            )
+        )
         return service
 
     @pytest.fixture
