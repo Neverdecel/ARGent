@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = "change-me-in-production"
 
+    # Base URL (for verification links in emails)
+    base_url: str = "http://localhost:8000"
+
+    # Verification settings
+    email_verification_expiry_hours: int = 24
+    phone_code_expiry_minutes: int = 10
+    phone_resend_cooldown_seconds: int = 60
+
     @property
     def database_url_sync(self) -> str:
         """Get synchronous database URL (for Alembic migrations)."""

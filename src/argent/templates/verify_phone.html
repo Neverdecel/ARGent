@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Phone Verification - ARGent{% endblock %}
+
+{% block content %}
+<div class="verify-phone">
+    <h1>Enter Verification Code</h1>
+
+    <p class="subtitle">We sent a 6-digit code to <strong>{{ phone }}</strong></p>
+
+    <form id="verify-form" class="form">
+        <div class="form-group">
+            <label for="code">Verification Code</label>
+            <input type="text" id="code" name="code" required
+                   placeholder="000000"
+                   pattern="\d{6}"
+                   maxlength="6"
+                   autocomplete="one-time-code"
+                   inputmode="numeric"
+                   class="code-input">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Verify</button>
+
+        <div id="form-error" class="alert alert-error" style="display: none;"></div>
+        <div id="form-success" class="alert alert-success" style="display: none;"></div>
+    </form>
+
+    <div class="resend-section">
+        <p>Didn't receive the code?</p>
+        <button id="resend-btn" class="btn btn-secondary">Resend Code</button>
+        <p id="resend-status" class="resend-status"></p>
+    </div>
+
+    <p class="back-link"><a href="/verify">&larr; Back to verification status</a></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Verify form submission
+document.getElementById('verify-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const form = e.target;
+    const errorDiv = document.getElementById('form-error');
+    const successDiv = document.getElementById('form-success');
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Verifying...';
+
+    try {
+        const response = await fetch('/api/verify/phone', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                code: form.code.value,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            successDiv.textContent = 'Phone verified successfully!';
+            successDiv.style.display = 'block';
+            setTimeout(() => {
+                window.location.href = '/verify';
+            }, 1500);
+        } else {
+            errorDiv.textContent = data.detail || 'Verification failed';
+            errorDiv.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Verify';
+        }
+    } catch (err) {
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Verify';
+    }
+});
+
+// Resend button
+document.getElementById('resend-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('resend-btn');
+    const status = document.getElementById('resend-status');
+
+    btn.disabled = true;
+    status.textContent = 'Sending...';
+    status.className = 'resend-status';
+
+    try {
+        const response = await fetch('/api/verify/phone/resend', {
+            method: 'POST',
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            status.textContent = 'Code sent! Check your phone.';
+            status.className = 'resend-status success';
+            // Keep button disabled for a bit
+            setTimeout(() => {
+                btn.disabled = false;
+                status.textContent = '';
+            }, 60000); // 60 seconds
+        } else {
+            status.textContent = data.detail || 'Failed to resend code';
+            status.className = 'resend-status error';
+            btn.disabled = false;
+        }
+    } catch (err) {
+        status.textContent = 'Network error. Please try again.';
+        status.className = 'resend-status error';
+        btn.disabled = false;
+    }
+});
+
+// Auto-focus on code input
+document.getElementById('code').focus();
+</script>
+{% endblock %}
