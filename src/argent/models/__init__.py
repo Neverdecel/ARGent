@@ -11,6 +11,7 @@ from argent.models.player import (
     StoryMilestone,
     TrustEvent,
 )
+from argent.models.verification import TokenType, VerificationToken
 
 __all__ = [
     "Base",
@@ -22,4 +23,6 @@ __all__ = [
     "PlayerKnowledge",
     "StoryMilestone",
     "Message",
+    "TokenType",
+    "VerificationToken",
 ]

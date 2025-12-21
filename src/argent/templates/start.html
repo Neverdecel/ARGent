@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Start - ARGent{% endblock %}
+
+{% block content %}
+<div class="start-page">
+    <h1>Before You Begin</h1>
+
+    <div class="info-box">
+        <h2>What to Expect</h2>
+        <ul>
+            <li>You will receive messages via <strong>email</strong> and <strong>SMS</strong></li>
+            <li>These messages are from <strong>AI entities</strong> with their own personalities</li>
+            <li>The story adapts to your responses and choices</li>
+            <li>Messages may arrive at unexpected times</li>
+            <li>Not everyone you meet can be trusted</li>
+        </ul>
+    </div>
+
+    <div class="warning-box">
+        <p><strong>Warning:</strong> Once you begin, there is no turning back.<br>
+        The game will continue until you choose to stop.</p>
+    </div>
+
+    <div class="start-section">
+        <p>Are you ready?</p>
+
+        <form id="start-form">
+            <button type="submit" class="btn btn-primary btn-large">Start Game</button>
+        </form>
+
+        <div id="form-error" class="alert alert-error" style="display: none;"></div>
+        <div id="form-success" class="alert alert-success" style="display: none;"></div>
+    </div>
+
+    <p class="back-link"><a href="/verify">&larr; Not ready yet</a></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('start-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const errorDiv = document.getElementById('form-error');
+    const successDiv = document.getElementById('form-success');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Starting...';
+
+    try {
+        const response = await fetch('/api/start-game', {
+            method: 'POST',
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            successDiv.innerHTML = 'The game has begun.<br><strong>Check your email.</strong>';
+            successDiv.style.display = 'block';
+            submitBtn.style.display = 'none';
+        } else {
+            errorDiv.textContent = data.detail || 'Failed to start game';
+            errorDiv.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Start Game';
+        }
+    } catch (err) {
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Start Game';
+    }
+});
+</script>
+{% endblock %}

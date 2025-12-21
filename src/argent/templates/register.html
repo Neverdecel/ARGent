@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Register - ARGent{% endblock %}
+
+{% block content %}
+<div class="register">
+    <h1>Begin Your Journey</h1>
+
+    <div class="warning-box">
+        <p><strong>What you're signing up for:</strong></p>
+        <p>You are about to enter ARGent. You will receive communications from AI entities via <strong>email</strong> and <strong>SMS</strong>. These messages are part of an alternate reality game experience.</p>
+        <p>Messages may arrive at unexpected times. The line between fiction and reality is intentionally blurred.</p>
+        <p>By continuing, you consent to receiving these messages.</p>
+    </div>
+
+    <form id="register-form" class="form">
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" required
+                   placeholder="your@email.com"
+                   autocomplete="email">
+            <span class="help-text">You'll receive verification and game messages here</span>
+        </div>
+
+        <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" required
+                   placeholder="+1234567890"
+                   pattern="^\+[1-9]\d{1,14}$"
+                   autocomplete="tel">
+            <span class="help-text">E.164 format with country code (e.g., +1 for US)</span>
+        </div>
+
+        <div class="form-group">
+            <label for="timezone">Timezone (optional)</label>
+            <select id="timezone" name="timezone">
+                <option value="UTC">UTC</option>
+                <option value="America/New_York">Eastern Time (US)</option>
+                <option value="America/Chicago">Central Time (US)</option>
+                <option value="America/Denver">Mountain Time (US)</option>
+                <option value="America/Los_Angeles">Pacific Time (US)</option>
+                <option value="Europe/London">London</option>
+                <option value="Europe/Paris">Paris/Berlin</option>
+                <option value="Asia/Tokyo">Tokyo</option>
+                <option value="Asia/Shanghai">Shanghai</option>
+                <option value="Australia/Sydney">Sydney</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Register</button>
+
+        <div id="form-error" class="alert alert-error" style="display: none;"></div>
+    </form>
+
+    <p class="back-link"><a href="/">&larr; Back</a></p>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const form = e.target;
+    const errorDiv = document.getElementById('form-error');
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    errorDiv.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Registering...';
+
+    try {
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: form.email.value,
+                phone: form.phone.value,
+                timezone: form.timezone.value,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            window.location.href = data.redirect;
+        } else {
+            errorDiv.textContent = data.detail || 'Registration failed';
+            errorDiv.style.display = 'block';
+        }
+    } catch (err) {
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Register';
+    }
+});
+</script>
+{% endblock %}
