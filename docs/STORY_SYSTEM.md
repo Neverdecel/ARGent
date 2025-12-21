@@ -4,6 +4,7 @@
 > - [DATA_ARCHITECTURE.md](DATA_ARCHITECTURE.md) - Detailed data structures, storage layers, and context assembly
 > - [OPENING_WEEK_TIMELINE.md](OPENING_WEEK_TIMELINE.md) - Day-by-day timing and triggers
 > - [TECHNOLOGY_CHOICES.md](TECHNOLOGY_CHOICES.md) - Tech stack and infrastructure
+> - [IMMERSION_DESIGN.md](IMMERSION_DESIGN.md) - Advanced immersion mechanics (lifecycle, world layer, inter-agent)
 
 ## Philosophy
 
@@ -452,6 +453,69 @@ breaking_behavior_rules:
 ```
 
 This keeps immersion intact while making player behavior part of the story. Agents might start questioning if the player is "compromised" or "testing them."
+
+---
+
+## Advanced Immersion Systems
+
+> Full details in [IMMERSION_DESIGN.md](IMMERSION_DESIGN.md)
+
+These systems work together to create deep player immersion:
+
+### Character Lifecycle
+
+Characters are mortal. They can fade, go silent, or disappear entirely.
+
+| State | Behavior |
+|-------|----------|
+| **Engaged** | Normal contact |
+| **Cooling** | Shorter messages, longer delays |
+| **Silent** | May not respond |
+| **Gone** | Will never respond |
+
+Agents always signal before going silent (so it doesn't feel like a bug).
+
+### Consistency Tracking
+
+Agent claims are tracked separately from player knowledge:
+- Lies and significant claims are recorded
+- System prevents agents from contradicting themselves
+- Enables "caught in a lie" moments when agents compare notes
+
+### Channel Inheritance
+
+When an agent goes "gone," a new character can inherit their channel (same phone number, different voice). First occurrence is explicitly announced to establish the mechanic.
+
+### World Layer (MVP: Minimal)
+
+Per-player tracking of:
+- **Exposure level**: 0-100, increases with risky actions
+- **Spawn conditions**: New characters appear based on player actions, not plot timing
+
+### Inter-Agent Communication
+
+When agents become aware of each other:
+- Deterministic logic decides what information is shared
+- Some exchanges remain invisible to player
+- Results surface via subtle behavioral changes
+
+### Player Engagement States
+
+| State | Trigger | Behavior |
+|-------|---------|----------|
+| Active | < 48h | Normal pacing |
+| Casual | 3-5 days | Concerned messages |
+| Dormant | 7-13 days | Re-engagement hooks |
+| Lapsed | 14-20 days | Weekly high-value only |
+| Churned | 21+ days | Pause all messages |
+
+No "game over" state—the world moves on, and returning players find a world that evolved without them.
+
+### Pacing Constraints
+
+- Maximum 4 agents actively messaging at once
+- Maximum 3-4 new pieces of information per message
+- Maximum 2-3 active plot threads simultaneously
 
 ---
 
