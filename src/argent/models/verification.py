@@ -2,7 +2,8 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+from uuid import UUID as PyUUID
 
 from sqlalchemy import ForeignKey, Index, Text, text
 from sqlalchemy.dialects.postgresql import UUID
@@ -30,7 +31,7 @@ class VerificationToken(Base, UUIDMixin, TimestampMixin):
 
     __tablename__ = "verification_tokens"
 
-    player_id: Mapped[Any] = mapped_column(
+    player_id: Mapped[PyUUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("players.id", ondelete="CASCADE"),
         nullable=False,

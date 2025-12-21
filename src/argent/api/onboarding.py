@@ -337,7 +337,7 @@ async def resend_phone_code(
     # Get player phone number
     result = await db.execute(select(Player).where(Player.id == player_id))
     player = result.scalar_one_or_none()
-    if not player:
+    if not player or not player.phone:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Player not found",
@@ -395,7 +395,7 @@ async def verification_status(
 
     return VerificationStatusResponse(
         email=player.email,
-        phone=player.phone,
+        phone=player.phone or "",
         email_verified=player.email_verified,
         phone_verified=player.phone_verified,
         can_start_game=player.email_verified and player.phone_verified,

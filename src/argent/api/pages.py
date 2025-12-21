@@ -37,7 +37,8 @@ def _get_player_id_from_session(
         from itsdangerous import URLSafeTimedSerializer
 
         serializer = URLSafeTimedSerializer(settings.secret_key, salt="session")
-        return serializer.loads(session_cookie, max_age=60 * 60 * 24 * 7)
+        result: str = serializer.loads(session_cookie, max_age=60 * 60 * 24 * 7)
+        return result
     except Exception:
         return None
 
