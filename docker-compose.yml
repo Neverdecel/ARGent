@@ -8,14 +8,12 @@ services:
     build: .
     ports:
       - "8000:8000"
+    env_file:
+      - .env.local
     environment:
       - DATABASE_URL=postgresql+asyncpg://argent:${DB_PASSWORD:-argent}@postgres:5432/argent
       - REDIS_URL=redis://redis:6379
       - DEBUG=${DEBUG:-true}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
-      - TELEGRAM_BOT_TOKEN_EMBER=${TELEGRAM_BOT_TOKEN_EMBER:-}
-      - TELEGRAM_BOT_TOKEN_MIRO=${TELEGRAM_BOT_TOKEN_MIRO:-}
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
     depends_on:
       postgres:
@@ -30,13 +28,11 @@ services:
 
   worker:
     build: .
+    env_file:
+      - .env.local
     environment:
       - DATABASE_URL=postgresql+asyncpg://argent:${DB_PASSWORD:-argent}@postgres:5432/argent
       - REDIS_URL=redis://redis:6379
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
-      - TELEGRAM_BOT_TOKEN_EMBER=${TELEGRAM_BOT_TOKEN_EMBER:-}
-      - TELEGRAM_BOT_TOKEN_MIRO=${TELEGRAM_BOT_TOKEN_MIRO:-}
     depends_on:
       postgres:
         condition: service_healthy
