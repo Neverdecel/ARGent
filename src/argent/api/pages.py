@@ -99,9 +99,7 @@ async def verify_page(
 @router.get("/verify/email/success", response_class=HTMLResponse)
 async def verify_email_success_page(request: Request) -> HTMLResponse:
     """Email verification success page."""
-    return templates.TemplateResponse(
-        "verify_email_success.html", {"request": request}
-    )
+    return templates.TemplateResponse("verify_email_success.html", {"request": request})
 
 
 @router.get("/verify/phone", response_class=HTMLResponse)

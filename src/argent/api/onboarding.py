@@ -46,9 +46,7 @@ class RegisterRequest(BaseModel):
     def validate_phone(cls, v: str) -> str:
         """Validate phone is in E.164 format."""
         if not E164_PATTERN.match(v):
-            raise ValueError(
-                "Phone must be in E.164 format (e.g., +1234567890)"
-            )
+            raise ValueError("Phone must be in E.164 format (e.g., +1234567890)")
         return v
 
 
@@ -165,9 +163,7 @@ async def register(
     verification email and SMS.
     """
     # Check if email already exists
-    existing = await db.execute(
-        select(Player).where(Player.email == request.email)
-    )
+    existing = await db.execute(select(Player).where(Player.email == request.email))
     if existing.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -175,9 +171,7 @@ async def register(
         )
 
     # Check if phone already exists
-    existing = await db.execute(
-        select(Player).where(Player.phone == request.phone)
-    )
+    existing = await db.execute(select(Player).where(Player.phone == request.phone))
     if existing.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -333,9 +327,7 @@ async def resend_phone_code(
         )
 
     # Check rate limit
-    can_resend, seconds_remaining = await verification_service.can_resend_phone_code(
-        player_id
-    )
+    can_resend, seconds_remaining = await verification_service.can_resend_phone_code(player_id)
     if not can_resend:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,

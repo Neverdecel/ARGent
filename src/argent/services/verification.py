@@ -188,16 +188,12 @@ class VerificationService:
 
         if token.created_at > cooldown_cutoff:
             # Still in cooldown
-            seconds_remaining = int(
-                (token.created_at - cooldown_cutoff).total_seconds()
-            )
+            seconds_remaining = int((token.created_at - cooldown_cutoff).total_seconds())
             return False, seconds_remaining
 
         return True, 0
 
-    async def get_active_tokens_count(
-        self, player_id: UUID, token_type: TokenType
-    ) -> int:
+    async def get_active_tokens_count(self, player_id: UUID, token_type: TokenType) -> int:
         """Get the count of active (unused, unexpired) tokens for a player."""
         now = datetime.now(UTC)
 
@@ -211,9 +207,7 @@ class VerificationService:
         )
         return len(result.scalars().all())
 
-    async def _invalidate_tokens(
-        self, player_id: UUID, token_type: TokenType
-    ) -> int:
+    async def _invalidate_tokens(self, player_id: UUID, token_type: TokenType) -> int:
         """Invalidate all active tokens of a type for a player.
 
         Returns the number of tokens invalidated.
@@ -250,10 +244,7 @@ class VerificationService:
         result = await self.db.execute(
             select(VerificationToken).where(
                 (VerificationToken.expires_at < now)
-                | (
-                    VerificationToken.used_at.is_not(None)
-                    & (VerificationToken.used_at < cutoff)
-                )
+                | (VerificationToken.used_at.is_not(None) & (VerificationToken.used_at < cutoff))
             )
         )
         tokens = result.scalars().all()
