@@ -93,7 +93,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     try {
         const payload = {
             email: form.email.value,
-            timezone: form.timezone.value,
+            timezone: document.getElementById('timezone').value,
             communication_mode: isWebOnly ? 'web_only' : 'immersive',
         };
         // Only include phone for immersive mode
