@@ -25,6 +25,9 @@ class Player(Base, UUIDMixin, TimestampMixin):
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Communication mode: 'immersive' (real email/SMS) or 'web_only' (web inbox)
+    communication_mode: Mapped[str] = mapped_column(Text, default="immersive")
+
     # Relationships
     keys: Mapped[list["PlayerKey"]] = relationship(back_populates="player")
     trust_scores: Mapped[list["PlayerTrust"]] = relationship(back_populates="player")
@@ -137,20 +140,30 @@ class StoryMilestone(Base, TimestampMixin):
 
 
 class Message(Base, UUIDMixin, TimestampMixin):
-    """Message metadata (NO content - content is in Memory Bank)."""
+    """Message metadata and optional content for web-only mode.
+
+    For immersive mode: content is in Memory Bank (subject/content/html_content are NULL).
+    For web_only mode: content is stored directly in these fields.
+    """
 
     __tablename__ = "messages"
 
     player_id: Mapped[Any] = mapped_column(UUID(as_uuid=True), ForeignKey("players.id"))
     agent_id: Mapped[str | None] = mapped_column(Text)  # NULL for system messages
-    channel: Mapped[str] = mapped_column(Text, nullable=False)  # 'email', 'telegram', 'system'
+    channel: Mapped[str] = mapped_column(Text, nullable=False)  # 'email', 'sms', 'web', 'system'
     direction: Mapped[str] = mapped_column(Text, nullable=False)  # 'inbound', 'outbound'
 
-    # External provider message ID (Mailgun Message-Id or Telegram message_id)
+    # External provider message ID (Mailgun Message-Id or Twilio MessageSid)
     external_id: Mapped[str | None] = mapped_column(Text)
 
-    # Reference to Memory Bank session
+    # Reference to Memory Bank session (for conversation threading)
     session_id: Mapped[str | None] = mapped_column(Text)
+
+    # Message content (populated for web_only mode)
+    subject: Mapped[str | None] = mapped_column(Text)  # For email-style messages
+    content: Mapped[str | None] = mapped_column(Text)  # Plain text content
+    html_content: Mapped[str | None] = mapped_column(Text)  # HTML formatted content
+    sender_name: Mapped[str | None] = mapped_column(Text)  # 'Ember', 'Miro', or player name
 
     # Delivery tracking
     delivered_at: Mapped[datetime | None] = mapped_column()
@@ -165,4 +178,5 @@ class Message(Base, UUIDMixin, TimestampMixin):
 
     __table_args__ = (
         Index("idx_messages_player_recent", "player_id", "created_at", postgresql_using="btree"),
+        Index("idx_messages_session", "session_id", postgresql_using="btree"),
     )

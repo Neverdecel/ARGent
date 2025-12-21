@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     phone_code_expiry_minutes: int = 10
     phone_resend_cooldown_seconds: int = 60
 
+    # Web inbox (non-immersive mode)
+    web_inbox_enabled: bool = True  # Enable web inbox feature
+    allow_web_only_registration: bool = True  # Allow players to register in web-only mode
+    web_only_verification_code: str = "123456"  # Fixed code for simulated phone verification
+
     @property
     def database_url_sync(self) -> str:
         """Get synchronous database URL (for Alembic migrations)."""

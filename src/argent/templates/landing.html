@@ -10,11 +10,64 @@
 
     <p class="tagline">Something is waiting for you.</p>
 
-    <a href="/register" class="btn btn-primary">Enter</a>
+    <form id="enter-form" class="form">
+        <div class="form-group">
+            <input type="email" id="email" name="email" required
+                   placeholder="your@email.com"
+                   autocomplete="email">
+        </div>
+        <button type="submit" class="btn btn-primary">Enter</button>
+        <div id="form-error" class="alert alert-error" style="display: none;"></div>
+    </form>
 
     <p class="disclaimer">
         By entering, you consent to receiving communications<br>
         from AI entities through various channels.
     </p>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('enter-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById('email').value;
+    const errorDiv = document.getElementById('form-error');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+
+    errorDiv.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Entering...';
+
+    try {
+        // Try to login first
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Existing user - redirect
+            window.location.href = data.redirect;
+        } else if (response.status === 404) {
+            // New user - go to register
+            window.location.href = '/register?email=' + encodeURIComponent(email);
+        } else {
+            errorDiv.textContent = data.detail || 'Something went wrong';
+            errorDiv.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Enter';
+        }
+    } catch (err) {
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Enter';
+    }
+});
+</script>
 {% endblock %}

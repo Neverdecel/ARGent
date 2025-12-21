@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - ARGent{% endblock %}
+
+{% block content %}
+<div class="conversation-page">
+    <div class="conversation-header">
+        <a href="/inbox" class="back-btn">&larr;</a>
+        <h1>{{ title }}</h1>
+    </div>
+
+    <div class="message-thread">
+        {% for msg in messages %}
+        <div class="message {% if msg.direction == 'inbound' %}message-sent{% else %}message-received{% endif %}">
+            <div class="message-sender">{{ msg.sender_name or 'Unknown' }}</div>
+            {% if msg.subject %}
+            <div class="message-subject">{{ msg.subject }}</div>
+            {% endif %}
+            <div class="message-content">
+                {% if msg.html_content %}
+                {{ msg.html_content | safe }}
+                {% else %}
+                {{ msg.content | default('', true) | replace('\n', '<br>') | safe }}
+                {% endif %}
+            </div>
+            <div class="message-time">{{ msg.created_at.strftime('%b %d, %I:%M %p') }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="reply-section">
+        <form id="reply-form" class="reply-form">
+            <input type="hidden" name="session_id" value="{{ session_id }}">
+            <div class="form-group">
+                <textarea
+                    id="reply-content"
+                    name="content"
+                    placeholder="Type your reply..."
+                    rows="3"
+                    required
+                ></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Send Reply</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('reply-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const content = document.getElementById('reply-content').value;
+    const sessionId = form.querySelector('input[name="session_id"]').value;
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+
+    try {
+        const response = await fetch('/api/inbox/compose', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                content: content,
+                session_id: sessionId
+            })
+        });
+
+        if (response.ok) {
+            // Reload page to show new message
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert('Failed to send: ' + (error.detail || 'Unknown error'));
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Send Reply';
+        }
+    } catch (err) {
+        alert('Failed to send message. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send Reply';
+    }
+});
+</script>
+{% endblock %}
