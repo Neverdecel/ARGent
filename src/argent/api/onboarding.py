@@ -258,7 +258,8 @@ async def register(
     if not email_sent:
         logger.warning("Failed to send verification email to %s", request.email)
 
-    # Send verification SMS
+    # Send verification SMS (phone is guaranteed non-None in immersive mode)
+    assert request.phone is not None
     sms_sent = await _send_verification_sms(
         sms_service=sms_service,
         to_phone=request.phone,
