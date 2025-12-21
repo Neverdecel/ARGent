@@ -4,26 +4,22 @@
 
 {% block content %}
 <div class="inbox-page">
-    <div class="channel-tabs">
-        <a href="/inbox" class="tab {% if not channel_filter %}active{% endif %}">All</a>
-        <a href="/inbox?channel=email" class="tab {% if channel_filter == 'email' %}active{% endif %}">Email</a>
-        <a href="/inbox?channel=sms" class="tab {% if channel_filter == 'sms' %}active{% endif %}">SMS</a>
-    </div>
+    <h1>Inbox</h1>
 
     <div class="message-list">
         {% if conversations %}
             {% for conv in conversations %}
             <a href="/inbox/conversation/{{ conv.session_id }}" class="message-item {% if conv.unread_count > 0 %}unread{% endif %}">
-                <div class="message-channel">{{ (conv.channel or 'email')|upper }}</div>
                 <div class="message-from">{{ conv.title }}</div>
-                <div class="message-subject">{{ conv.latest_message.subject or '(No subject)' }}</div>
+                <div class="message-subject">{{ conv.latest_message.subject or '' }}</div>
                 <div class="message-preview">{{ (conv.latest_message.content or '')[:120] | replace('\n', ' ') }}{% if (conv.latest_message.content or '')|length > 120 %}...{% endif %}</div>
                 <div class="message-date">{{ conv.updated_at.strftime('%b %d, %H:%M') }}</div>
             </a>
             {% endfor %}
         {% else %}
             <div class="empty-inbox">
-                <p>No messages yet</p>
+                <p>Waiting for messages...</p>
+                <p class="empty-hint">They'll find you when they're ready.</p>
             </div>
         {% endif %}
     </div>

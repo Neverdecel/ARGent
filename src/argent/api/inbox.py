@@ -207,8 +207,8 @@ async def conversation_page(
             messages = [message]
             # Mark as read
             await inbox_service.mark_read(player.id, message_id)
-        except ValueError:
-            raise HTTPException(status_code=404, detail="Invalid message ID")
+        except ValueError as err:
+            raise HTTPException(status_code=404, detail="Invalid message ID") from err
     else:
         # Get messages in conversation
         messages = await inbox_service.get_conversation_messages(player.id, session_id)
@@ -231,35 +231,6 @@ async def conversation_page(
             "session_id": session_id,
             "title": title,
             "messages": messages,
-            "player": player,
-        },
-    )
-
-
-@router.get("/inbox/compose", response_class=HTMLResponse)
-async def compose_page(
-    request: Request,
-    reply_to: str | None = None,
-    argent_session: Annotated[str | None, Cookie()] = None,
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-) -> Response:
-    """Compose new message page."""
-    if not settings.web_inbox_enabled:
-        raise HTTPException(status_code=404, detail="Web inbox not enabled")
-
-    player = await _get_current_player(argent_session, db, settings)
-    if not player:
-        return RedirectResponse(url="/register", status_code=status.HTTP_303_SEE_OTHER)
-
-    if player.communication_mode != "web_only":
-        return RedirectResponse(url="/start", status_code=status.HTTP_303_SEE_OTHER)
-
-    return templates.TemplateResponse(
-        "compose.html",
-        {
-            "request": request,
-            "reply_to_session": reply_to,
             "player": player,
         },
     )

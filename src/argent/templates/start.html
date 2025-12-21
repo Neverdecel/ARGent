@@ -4,6 +4,25 @@
 
 {% block content %}
 <div class="start-page">
+    {% if not game_already_started %}
+    <div class="step-indicator">
+        <div class="step completed">
+            <div class="step-dot"></div>
+            <span class="step-label">Register</span>
+        </div>
+        <div class="step-line completed"></div>
+        <div class="step completed">
+            <div class="step-dot"></div>
+            <span class="step-label">Verify</span>
+        </div>
+        <div class="step-line completed"></div>
+        <div class="step current">
+            <div class="step-dot"></div>
+            <span class="step-label">Start</span>
+        </div>
+    </div>
+    {% endif %}
+
     {% if game_already_started %}
     <h1>Game In Progress</h1>
 

@@ -255,6 +255,71 @@ a:hover {
     font-size: 1rem;
 }
 
+/* Step Indicator */
+.step-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 2rem;
+    padding: 1rem 0;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.step-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--bg-tertiary);
+    border: 2px solid var(--border);
+    position: relative;
+    z-index: 1;
+}
+
+.step.completed .step-dot {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+
+.step.current .step-dot {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+}
+
+.step-line {
+    width: 60px;
+    height: 2px;
+    background-color: var(--border);
+}
+
+.step.completed + .step-line,
+.step-line.completed {
+    background-color: var(--accent);
+}
+
+.step-label {
+    position: absolute;
+    top: 20px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.step.current .step-label {
+    color: var(--accent);
+}
+
+.step.completed .step-label {
+    color: var(--text-secondary);
+}
+
 /* Verify page */
 .verify {
     padding-top: 2rem;
@@ -434,32 +499,6 @@ a:hover {
     margin: 0 auto;
 }
 
-.channel-tabs {
-    display: flex;
-    gap: 0;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border);
-}
-
-.channel-tabs .tab {
-    padding: 0.75rem 1.5rem;
-    color: var(--text-muted);
-    text-decoration: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    font-size: 0.9rem;
-}
-
-.channel-tabs .tab:hover {
-    color: var(--text-primary);
-    text-decoration: none;
-}
-
-.channel-tabs .tab.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-}
-
 .message-list {
     display: flex;
     flex-direction: column;
@@ -467,12 +506,12 @@ a:hover {
 
 .message-item {
     display: grid;
-    grid-template-columns: 60px 1fr auto;
+    grid-template-columns: 1fr auto;
     grid-template-rows: auto auto auto;
     grid-template-areas:
-        "channel from date"
-        "channel subject date"
-        "channel preview preview";
+        "from date"
+        "subject date"
+        "preview preview";
     gap: 0.25rem 1rem;
     padding: 1rem 0;
     border-bottom: 1px solid var(--border);
@@ -497,14 +536,6 @@ a:hover {
 .message-item.unread .message-from,
 .message-item.unread .message-subject {
     color: var(--accent);
-}
-
-.message-channel {
-    grid-area: channel;
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    letter-spacing: 0.5px;
-    padding-top: 0.2rem;
 }
 
 .message-from {
@@ -608,7 +639,13 @@ a:hover {
 }
 
 .empty-inbox p {
-    margin: 0;
+    margin: 0 0 0.5rem 0;
+}
+
+.empty-hint {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-style: italic;
 }
 
 .inbox-footer {
@@ -720,22 +757,6 @@ a:hover {
 .reply-form textarea:focus {
     outline: none;
     border-color: var(--accent);
-}
-
-/* Compose page */
-.compose-page {
-    padding-top: 1rem;
-}
-
-.compose-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.compose-header h1 {
-    margin-bottom: 0;
 }
 
 .form-actions {

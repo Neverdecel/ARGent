@@ -21,25 +21,25 @@ Players choose their mode at registration:
 
 1. Landing page (`/`) - Enter email
 2. If new user, redirect to `/register` with email prefilled
-3. If existing user, login and redirect to appropriate page
+3. Registration includes step progress indicator (Register → Verify → Start)
 4. Web-only mode: Phone field hidden, verification auto-completed
 5. After registration, web-only players go directly to `/start`
+6. Timezone auto-detected from browser
 
 ### Inbox Structure
 
 ```
-/inbox                           - Message list (filterable by channel)
-/inbox?channel=email             - Email messages only
-/inbox?channel=sms               - SMS messages only
-/inbox/conversation/{session_id} - View conversation thread
+/inbox                           - Message list with title
+/inbox/conversation/{session_id} - View conversation thread (with reply form)
 ```
+
+Players can only reply within existing conversations - they cannot initiate new messages. This keeps the story agent-driven.
 
 ### Message Display
 
 Messages are displayed with:
-- Channel type (EMAIL/SMS)
 - Sender name
-- Subject line
+- Subject line (if present)
 - Preview text
 - Timestamp
 - Unread indicator
@@ -64,12 +64,13 @@ Added to `Player` model:
 
 Page routes in `api/inbox.py`:
 - `GET /inbox` - Inbox list page
-- `GET /inbox/conversation/{id}` - Conversation view
+- `GET /inbox/conversation/{id}` - Conversation view with reply form
 
 API routes:
 - `GET /api/inbox/conversations` - List conversations
 - `GET /api/inbox/messages/{id}` - Get single message
 - `POST /api/inbox/messages/{id}/read` - Mark as read
+- `POST /api/inbox/compose` - Send reply (within existing conversation)
 
 ### Configuration
 
