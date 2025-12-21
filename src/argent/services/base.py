@@ -13,6 +13,7 @@ class Channel(str, Enum):
 
     EMAIL = "email"
     SMS = "sms"
+    WEB = "web"  # Web inbox (non-immersive mode)
     SYSTEM = "system"
 
 

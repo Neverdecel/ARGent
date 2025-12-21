@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Inbox - ARGent{% endblock %}
+
+{% block content %}
+<div class="inbox-page">
+    <h1>Inbox</h1>
+
+    <div class="message-list">
+        {% if conversations %}
+            {% for conv in conversations %}
+            <a href="/inbox/conversation/{{ conv.session_id }}" class="message-item {% if conv.unread_count > 0 %}unread{% endif %}">
+                <div class="message-from">{{ conv.title }}</div>
+                <div class="message-subject">{{ conv.latest_message.subject or '' }}</div>
+                <div class="message-preview">{{ (conv.latest_message.content or '')[:120] | replace('\n', ' ') }}{% if (conv.latest_message.content or '')|length > 120 %}...{% endif %}</div>
+                <div class="message-date">{{ conv.updated_at.strftime('%b %d, %H:%M') }}</div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-inbox">
+                <p>Waiting for messages...</p>
+                <p class="empty-hint">They'll find you when they're ready.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

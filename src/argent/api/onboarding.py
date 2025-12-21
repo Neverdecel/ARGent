@@ -4,7 +4,7 @@ import logging
 import re
 import secrets
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
@@ -38,15 +38,33 @@ class RegisterRequest(BaseModel):
     """Registration request body."""
 
     email: EmailStr
-    phone: str
+    phone: str | None = None
     timezone: str = "UTC"
+    communication_mode: str = "immersive"  # 'immersive' or 'web_only'
 
     @field_validator("phone")
     @classmethod
-    def validate_phone(cls, v: str) -> str:
-        """Validate phone is in E.164 format."""
+    def validate_phone(cls, v: str | None, info: Any) -> str | None:
+        """Validate phone is in E.164 format (optional for web_only mode)."""
+        mode = info.data.get("communication_mode", "immersive")
+
+        # For web_only mode, phone is optional
+        if mode == "web_only":
+            return v  # Can be None or any value
+
+        # For immersive mode, phone is required and must be valid
+        if not v:
+            raise ValueError("Phone number is required for immersive mode")
         if not E164_PATTERN.match(v):
             raise ValueError("Phone must be in E.164 format (e.g., +1234567890)")
+        return v
+
+    @field_validator("communication_mode")
+    @classmethod
+    def validate_communication_mode(cls, v: str) -> str:
+        """Validate communication mode."""
+        if v not in ("immersive", "web_only"):
+            raise ValueError("communication_mode must be 'immersive' or 'web_only'")
         return v
 
 
@@ -87,6 +105,20 @@ class VerifyResponse(BaseModel):
 
     success: bool
     message: str
+
+
+class LoginRequest(BaseModel):
+    """Login request body."""
+
+    email: EmailStr
+
+
+class LoginResponse(BaseModel):
+    """Login response."""
+
+    success: bool
+    message: str
+    redirect: str
 
 
 # Session helpers
@@ -162,34 +194,56 @@ async def register(
     Creates player record, generates verification tokens, and sends
     verification email and SMS.
     """
-    # Check if email already exists
+    # Check if email already exists - redirect to login
     existing = await db.execute(select(Player).where(Player.email == request.email))
     if existing.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
+        return RegisterResponse(
+            success=True,
+            message="Email already registered. Redirecting to login.",
+            redirect=f"/login?email={request.email}",
         )
 
-    # Check if phone already exists
-    existing = await db.execute(select(Player).where(Player.phone == request.phone))
-    if existing.scalar_one_or_none():
+    # Check if phone already exists (skip for web-only mode)
+    if request.communication_mode != "web_only" and request.phone:
+        existing = await db.execute(select(Player).where(Player.phone == request.phone))
+        if existing.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Phone number already registered",
+            )
+
+    # Check if web-only registration is allowed
+    is_web_only = request.communication_mode == "web_only"
+    if is_web_only and not settings.allow_web_only_registration:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Phone number already registered",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Web-only registration is not enabled",
         )
 
     # Create player
     player = Player(
         email=request.email,
-        phone=request.phone,
+        phone=request.phone if not is_web_only else None,
         timezone=request.timezone,
-        email_verified=False,
-        phone_verified=False,
+        email_verified=is_web_only,  # Auto-verify for web-only mode
+        phone_verified=is_web_only,  # Auto-verify for web-only mode
+        communication_mode=request.communication_mode,
     )
     db.add(player)
     await db.flush()
 
-    # Generate verification tokens
+    if is_web_only:
+        # Web-only mode: skip real verification, redirect to start
+        _create_session_cookie(response, player.id, settings)
+        logger.info("Player registered (web-only mode): %s", player.id)
+
+        return RegisterResponse(
+            success=True,
+            message="Registration successful. Welcome to web-only mode.",
+            redirect="/start",
+        )
+
+    # Immersive mode: generate verification tokens and send real messages
     email_token = await verification_service.create_email_token(player.id)
     phone_code = await verification_service.create_phone_code(player.id)
 
@@ -204,7 +258,8 @@ async def register(
     if not email_sent:
         logger.warning("Failed to send verification email to %s", request.email)
 
-    # Send verification SMS
+    # Send verification SMS (phone is guaranteed non-None in immersive mode)
+    assert request.phone is not None
     sms_sent = await _send_verification_sms(
         sms_service=sms_service,
         to_phone=request.phone,
@@ -223,6 +278,53 @@ async def register(
         success=True,
         message="Registration successful. Please check your email and phone.",
         redirect="/verify",
+    )
+
+
+@router.post("/login", response_model=LoginResponse)
+async def login(
+    request: LoginRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> LoginResponse:
+    """
+    Login an existing player by email.
+
+    Creates a session and redirects to appropriate page based on player state.
+    """
+    # Find player by email
+    result = await db.execute(select(Player).where(Player.email == request.email))
+    player = result.scalar_one_or_none()
+
+    if not player:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email not found. Please register first.",
+        )
+
+    # Create session
+    _create_session_cookie(response, player.id, settings)
+    logger.info("Player logged in: %s", player.id)
+
+    # Determine redirect based on player state
+    if player.game_started_at:
+        # Game already started
+        if player.communication_mode == "web_only":
+            redirect = "/inbox"
+        else:
+            redirect = "/start"
+    elif player.email_verified and player.phone_verified:
+        # Verified but not started
+        redirect = "/start"
+    else:
+        # Needs verification
+        redirect = "/verify"
+
+    return LoginResponse(
+        success=True,
+        message="Welcome back!",
+        redirect=redirect,
     )
 
 
@@ -402,11 +504,19 @@ async def verification_status(
     )
 
 
+def get_web_inbox_service(db: AsyncSession = Depends(get_db)) -> Any:
+    """Get web inbox service instance."""
+    from argent.services.web_inbox import WebInboxService
+
+    return WebInboxService(db)
+
+
 @router.post("/start-game", response_model=VerifyResponse)
 async def start_game(
     argent_session: Annotated[str | None, Cookie()] = None,
     db: AsyncSession = Depends(get_db),
     email_service: EmailService = Depends(get_email_service),
+    web_inbox_service: Any = Depends(get_web_inbox_service),
     settings: Settings = Depends(get_settings),
 ) -> VerifyResponse:
     """
@@ -458,22 +568,36 @@ async def start_game(
     player.game_started_at = datetime.now(UTC)
     await db.flush()
 
-    # Send "The Key" email
-    email_sent = await _send_the_key_email(
-        email_service=email_service,
-        to_email=player.email,
-        key=key_value,
-        settings=settings,
-    )
-    if not email_sent:
-        logger.warning("Failed to send The Key email to %s", player.email)
+    # Send "The Key" message - via web inbox or email based on mode
+    if player.communication_mode == "web_only":
+        # Store in web inbox
+        await _send_the_key_to_inbox(
+            web_inbox_service=web_inbox_service,
+            player_id=player.id,
+            key=key_value,
+        )
+        logger.info("Game started (web-only) for player: %s", player_id)
+        return VerifyResponse(
+            success=True,
+            message="The game has begun. Check your inbox.",
+        )
+    else:
+        # Send real email
+        email_sent = await _send_the_key_email(
+            email_service=email_service,
+            to_email=player.email,
+            key=key_value,
+            settings=settings,
+        )
+        if not email_sent:
+            logger.warning("Failed to send The Key email to %s", player.email)
 
-    logger.info("Game started for player: %s", player_id)
+        logger.info("Game started for player: %s", player_id)
 
-    return VerifyResponse(
-        success=True,
-        message="The game has begun. Check your email.",
-    )
+        return VerifyResponse(
+            success=True,
+            message="The game has begun. Check your email.",
+        )
 
 
 # Helper functions
@@ -633,3 +757,62 @@ If you received this in error, please delete it immediately.
         from_email="unknown@noreply.localhost",  # Mysterious sender
     )
     return result.success
+
+
+async def _send_the_key_to_inbox(
+    web_inbox_service: Any,
+    player_id: UUID,
+    key: str,
+) -> None:
+    """Store 'The Key' message in web inbox for web-only players."""
+    from argent.services.base import OutboundMessage
+
+    subject = "You have a new message"
+    content = f"""---
+
+This wasn't meant for you.
+
+But since you're here... I need you to understand something.
+There's a key. It unlocks something important.
+
+{key}
+
+Use before Thursday. Or don't. I can't tell you what to do.
+
+Just... be careful who you talk to about this.
+
+- E
+
+---
+
+If you received this in error, please delete it immediately.
+"""
+
+    html_content = f"""<div style="border-left: 2px solid #333; padding-left: 20px;">
+<p style="color: #888;">---</p>
+<p>This wasn't meant for you.</p>
+<p>But since you're here... I need you to understand something.<br>
+There's a key. It unlocks something important.</p>
+<p style="font-size: 18px; background: #1a1a1a; padding: 15px; font-family: monospace; letter-spacing: 2px; color: #00ff88;">
+{key}
+</p>
+<p>Use before Thursday. Or don't. I can't tell you what to do.</p>
+<p>Just... be careful who you talk to about this.</p>
+<p style="margin-top: 30px;">- E</p>
+<p style="color: #888;">---</p>
+</div>
+<p style="color: #555; font-size: 11px; margin-top: 40px; font-style: italic;">
+If you received this in error, please delete it immediately.
+</p>
+"""
+
+    message = OutboundMessage(
+        player_id=player_id,
+        recipient="web-inbox",
+        content=content,
+        agent_id="ember",
+        subject=subject,
+        html_content=html_content,
+    )
+
+    await web_inbox_service.send_message(message)

@@ -4,50 +4,52 @@
 
 {% block content %}
 <div class="register">
-    <h1>Begin Your Journey</h1>
-
-    <div class="warning-box">
-        <p><strong>What you're signing up for:</strong></p>
-        <p>You are about to enter ARGent. You will receive communications from AI entities via <strong>email</strong> and <strong>SMS</strong>. These messages are part of an alternate reality game experience.</p>
-        <p>Messages may arrive at unexpected times. The line between fiction and reality is intentionally blurred.</p>
-        <p>By continuing, you consent to receiving these messages.</p>
+    <div class="step-indicator">
+        <div class="step current">
+            <div class="step-dot"></div>
+            <span class="step-label">Register</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+            <div class="step-dot"></div>
+            <span class="step-label">Verify</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+            <div class="step-dot"></div>
+            <span class="step-label">Start</span>
+        </div>
     </div>
 
+    <h1>Complete Registration</h1>
+
     <form id="register-form" class="form">
+        <input type="hidden" id="timezone" name="timezone" value="UTC">
         <div class="form-group">
-            <label for="email">Email Address</label>
+            <label for="email">Email</label>
             <input type="email" id="email" name="email" required
                    placeholder="your@email.com"
-                   autocomplete="email">
-            <span class="help-text">You'll receive verification and game messages here</span>
+                   autocomplete="email"
+                   {% if prefill_email %}value="{{ prefill_email }}"{% endif %}>
         </div>
 
         <div class="form-group">
-            <label for="phone">Phone Number</label>
+            <label for="phone">Phone</label>
             <input type="tel" id="phone" name="phone" required
                    placeholder="+1234567890"
-                   pattern="^\+[1-9]\d{1,14}$"
                    autocomplete="tel">
-            <span class="help-text">E.164 format with country code (e.g., +1 for US)</span>
+            <span class="help-text">E.164 format (e.g., +1234567890)</span>
         </div>
 
-        <div class="form-group">
-            <label for="timezone">Timezone (optional)</label>
-            <select id="timezone" name="timezone">
-                <option value="UTC">UTC</option>
-                <option value="America/New_York">Eastern Time (US)</option>
-                <option value="America/Chicago">Central Time (US)</option>
-                <option value="America/Denver">Mountain Time (US)</option>
-                <option value="America/Los_Angeles">Pacific Time (US)</option>
-                <option value="Europe/London">London</option>
-                <option value="Europe/Paris">Paris/Berlin</option>
-                <option value="Asia/Tokyo">Tokyo</option>
-                <option value="Asia/Shanghai">Shanghai</option>
-                <option value="Australia/Sydney">Sydney</option>
-            </select>
+        <div class="form-group mode-toggle">
+            <label class="toggle-label">
+                <input type="checkbox" id="web-only-mode" name="web_only_mode">
+                <span class="toggle-text">Web-only mode</span>
+            </label>
+            <span class="help-text">Skip phone - play through web inbox only</span>
         </div>
 
-        <button type="submit" class="btn btn-primary">Register</button>
+        <button type="submit" class="btn btn-primary">Continue</button>
 
         <div id="form-error" class="alert alert-error" style="display: none;"></div>
     </form>
@@ -59,28 +61,52 @@
 
 {% block scripts %}
 <script>
+// Auto-detect timezone
+document.getElementById('timezone').value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+// Toggle phone field visibility based on web-only mode
+const webOnlyCheckbox = document.getElementById('web-only-mode');
+const phoneGroup = document.querySelector('input[name="phone"]').closest('.form-group');
+
+webOnlyCheckbox.addEventListener('change', function() {
+    if (this.checked) {
+        phoneGroup.style.display = 'none';
+        document.getElementById('phone').removeAttribute('required');
+    } else {
+        phoneGroup.style.display = 'block';
+        document.getElementById('phone').setAttribute('required', '');
+    }
+});
+
 document.getElementById('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const form = e.target;
     const errorDiv = document.getElementById('form-error');
     const submitBtn = form.querySelector('button[type="submit"]');
+    const isWebOnly = document.getElementById('web-only-mode').checked;
 
     errorDiv.style.display = 'none';
     submitBtn.disabled = true;
     submitBtn.textContent = 'Registering...';
 
     try {
+        const payload = {
+            email: form.email.value,
+            timezone: document.getElementById('timezone').value,
+            communication_mode: isWebOnly ? 'web_only' : 'immersive',
+        };
+        // Only include phone for immersive mode
+        if (!isWebOnly) {
+            payload.phone = form.phone.value;
+        }
+
         const response = await fetch('/api/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                email: form.email.value,
-                phone: form.phone.value,
-                timezone: form.timezone.value,
-            }),
+            body: JSON.stringify(payload),
         });
 
         const data = await response.json();
@@ -88,7 +114,15 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
         if (response.ok) {
             window.location.href = data.redirect;
         } else {
-            errorDiv.textContent = data.detail || 'Registration failed';
+            // Handle different error formats
+            let errorMessage = 'Registration failed';
+            if (typeof data.detail === 'string') {
+                errorMessage = data.detail;
+            } else if (Array.isArray(data.detail)) {
+                // Validation errors from Pydantic
+                errorMessage = data.detail.map(err => err.msg || err.message || String(err)).join(', ');
+            }
+            errorDiv.textContent = errorMessage;
             errorDiv.style.display = 'block';
         }
     } catch (err) {

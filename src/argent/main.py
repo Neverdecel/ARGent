@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from argent.api.health import router as health_router
+from argent.api.inbox import router as inbox_router
 from argent.api.onboarding import router as onboarding_router
 from argent.api.pages import router as pages_router
 from argent.api.webhooks import router as webhooks_router
@@ -29,4 +30,5 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(health_router)
 app.include_router(webhooks_router)
 app.include_router(onboarding_router)
+app.include_router(inbox_router)
 app.include_router(pages_router)  # Pages router last (handles /)

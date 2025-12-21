@@ -4,6 +4,23 @@
 
 {% block content %}
 <div class="verify-phone">
+    <div class="step-indicator">
+        <div class="step completed">
+            <div class="step-dot"></div>
+            <span class="step-label">Register</span>
+        </div>
+        <div class="step-line completed"></div>
+        <div class="step current">
+            <div class="step-dot"></div>
+            <span class="step-label">Verify</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+            <div class="step-dot"></div>
+            <span class="step-label">Start</span>
+        </div>
+    </div>
+
     <h1>Enter Verification Code</h1>
 
     <p class="subtitle">We sent a 6-digit code to <strong>{{ phone }}</strong></p>
@@ -32,7 +49,7 @@
         <p id="resend-status" class="resend-status"></p>
     </div>
 
-    <p class="back-link"><a href="/verify">&larr; Back to verification status</a></p>
+    <p class="back-link"><a href="/verify">&larr; Back</a></p>
 </div>
 {% endblock %}
 

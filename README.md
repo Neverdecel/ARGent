@@ -1,5 +1,14 @@
 # ARGent
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![CI](https://github.com/Neverdecel/argent/actions/workflows/ci.yml/badge.svg)](https://github.com/Neverdecel/argent/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+
+<p align="center">
+  <img src="resources/landingpage-screenshot.png" alt="ARGent Landing Page" width="400">
+</p>
+
 **An AI-driven alternate reality game**
 
 ARGent is an open-source alternate reality game (ARG) powered by AI agents. Players receive messages from AI characters through real-world channels—email and SMS—as part of an unfolding mystery narrative. The game blurs the line between fiction and reality, creating an immersive experience that integrates into daily life.
@@ -21,6 +30,17 @@ Every player gets a unique experience. The AI agents remember your conversations
 - **Trust Mechanics** - Your decisions affect relationships with agents and unlock different story paths
 - **Self-Hostable** - Run your own instance with full control over your data
 
+## Play Modes
+
+ARGent supports two ways to play:
+
+| Mode | Description |
+|------|-------------|
+| **Immersive** | Messages arrive via real email and SMS, blurring the line between game and reality |
+| **Web-Only** | All messages appear in a browser inbox—no phone number required |
+
+Choose your experience during registration.
+
 ## Tech Stack
 
 | Component | Technology |
@@ -36,7 +56,16 @@ Every player gets a unique experience. The AI agents remember your conversations
 
 ## Project Status
 
-ARGent is currently in the **design and documentation phase**. We're building in the open—the docs folder contains comprehensive specifications for the story system, technical architecture, and agent personalities.
+ARGent is in **active development**. The core platform is functional:
+
+- **Onboarding flow** - Complete with email and phone verification
+- **Web inbox** - Browser-based messaging for non-immersive play
+- **Dual play modes** - Choose between real channels or web-only
+- **Infrastructure** - Docker deployment, CI/CD, database migrations
+
+**In progress**: AI agent integration with Google ADK/Gemini for dynamic story responses.
+
+We're building in the open—the docs folder contains comprehensive specifications for the story system, technical architecture, and agent personalities.
 
 ## Documentation
 
@@ -45,6 +74,8 @@ ARGent is currently in the **design and documentation phase**. We're building in
 - [Technology Choices](docs/TECHNOLOGY_CHOICES.md) - Architecture decisions
 - [Story System](docs/STORY_SYSTEM.md) - How the narrative engine works
 - [Data Architecture](docs/DATA_ARCHITECTURE.md) - Database and memory design
+- [Web Inbox](docs/WEB_INBOX.md) - Non-immersive play mode
+- [Immersion Design](docs/IMMERSION_DESIGN.md) - Agent interaction design
 
 ### Story & Characters
 

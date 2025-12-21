@@ -50,9 +50,33 @@ async def landing_page(request: Request) -> HTMLResponse:
 
 
 @router.get("/register", response_class=HTMLResponse)
-async def register_page(request: Request) -> HTMLResponse:
+async def register_page(
+    request: Request,
+    email: str | None = None,
+) -> HTMLResponse:
     """Registration page."""
-    return templates.TemplateResponse("register.html", {"request": request})
+    return templates.TemplateResponse(
+        "register.html",
+        {
+            "request": request,
+            "prefill_email": email,
+        },
+    )
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(
+    request: Request,
+    email: str | None = None,
+) -> HTMLResponse:
+    """Login page for returning players."""
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "prefill_email": email,
+        },
+    )
 
 
 @router.get("/verify", response_class=HTMLResponse)
@@ -162,6 +186,9 @@ async def start_page(
     if not player.email_verified or not player.phone_verified:
         return RedirectResponse(url="/verify", status_code=status.HTTP_303_SEE_OTHER)
 
+    # Check if web-only mode
+    is_web_only = player.communication_mode == "web_only"
+
     # If game already started, show different message
     if player.game_started_at:
         return templates.TemplateResponse(
@@ -169,6 +196,7 @@ async def start_page(
             {
                 "request": request,
                 "game_already_started": True,
+                "is_web_only": is_web_only,
             },
         )
 
@@ -177,5 +205,6 @@ async def start_page(
         {
             "request": request,
             "game_already_started": False,
+            "is_web_only": is_web_only,
         },
     )
