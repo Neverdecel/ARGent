@@ -27,6 +27,7 @@ from argent.models import Player
 from argent.models.player import Message, PlayerKnowledge, PlayerTrust
 from argent.services.base import OutboundMessage
 from argent.services.web_inbox import WebInboxService
+from argent.story import load_character
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +136,19 @@ async def _get_current_player(
 def _get_web_inbox_service(db: AsyncSession) -> WebInboxService:
     """Create WebInboxService instance."""
     return WebInboxService(db)
+
+
+def _get_agent_avatar_url(agent_id: str | None) -> str | None:
+    """Get the avatar URL for an agent."""
+    if not agent_id:
+        return None
+    try:
+        persona = load_character(agent_id)
+        if persona.avatar:
+            return f"/static/avatars/{persona.avatar}"
+    except ValueError:
+        pass
+    return None
 
 
 async def _get_session_agent_id(
@@ -336,13 +350,31 @@ async def conversation_page(
     participants = {m.sender_name for m in messages if m.sender_name and m.sender_name != "You"}
     title = ", ".join(sorted(participants)) if participants else "Conversation"
 
+    # Add avatar URLs to messages
+    messages_with_avatars = [
+        {
+            "id": msg.id,
+            "channel": msg.channel,
+            "direction": msg.direction,
+            "sender_name": msg.sender_name,
+            "subject": msg.subject,
+            "content": msg.content,
+            "html_content": msg.html_content,
+            "created_at": msg.created_at,
+            "read_at": msg.read_at,
+            "session_id": msg.session_id,
+            "avatar_url": _get_agent_avatar_url(msg.agent_id),
+        }
+        for msg in messages
+    ]
+
     return templates.TemplateResponse(
         "conversation.html",
         {
             "request": request,
             "session_id": session_id,
             "title": title,
-            "messages": messages,
+            "messages": messages_with_avatars,
             "player": player,
         },
     )

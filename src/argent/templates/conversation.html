@@ -12,7 +12,12 @@
     <div class="message-thread">
         {% for msg in messages %}
         <div class="message {% if msg.direction == 'inbound' %}message-sent{% else %}message-received{% endif %}">
-            <div class="message-sender">{{ msg.sender_name or 'Unknown' }}</div>
+            <div class="message-header">
+                {% if msg.direction == 'outbound' and msg.avatar_url %}
+                <img src="{{ msg.avatar_url }}" alt="{{ msg.sender_name }}" class="message-avatar">
+                {% endif %}
+                <div class="message-sender">{{ msg.sender_name or 'Unknown' }}</div>
+            </div>
             {% if msg.subject %}
             <div class="message-subject">{{ msg.subject }}</div>
             {% endif %}

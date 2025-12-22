@@ -7,6 +7,7 @@ to delete the cryptic key they received.
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import TYPE_CHECKING
 
@@ -16,13 +17,12 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from argent.agents.base import AgentContext, AgentResponse, BaseAgent
-from argent.agents.prompts.ember import (
-    build_ember_first_contact_prompt,
-    build_ember_system_prompt,
-)
+from argent.story import PromptBuilder, load_character
 
 if TYPE_CHECKING:
     pass
+
+logger = logging.getLogger(__name__)
 
 
 class EmberAgent(BaseAgent):
@@ -48,6 +48,10 @@ class EmberAgent(BaseAgent):
         """
         self._model = model
 
+        # Load persona from single source of truth
+        self._persona = load_character("ember")
+        self._prompt_builder = PromptBuilder()
+
         # Set the API key in environment for Google GenAI SDK
         os.environ["GOOGLE_API_KEY"] = gemini_api_key
 
@@ -60,17 +64,17 @@ class EmberAgent(BaseAgent):
     @property
     def agent_id(self) -> str:
         """Unique agent identifier."""
-        return "ember"
+        return self._persona.agent_id
 
     @property
     def display_name(self) -> str:
         """Display name for messages."""
-        return "Ember"
+        return self._persona.display_name
 
     @property
     def channel(self) -> str:
         """Communication channel."""
-        return "email"
+        return self._persona.channel
 
     def _create_adk_agent(self, system_prompt: str) -> LlmAgent:
         """Create the ADK agent with the given system prompt."""
@@ -117,8 +121,9 @@ class EmberAgent(BaseAgent):
             AgentResponse containing Ember's reply
         """
         # Build the dynamic system prompt with current context
-        system_prompt = build_ember_system_prompt(
-            player_trust_score=context.player_trust_score,
+        system_prompt = self._prompt_builder.build_system_prompt(
+            persona=self._persona,
+            trust_score=context.player_trust_score,
             player_knowledge=context.player_knowledge,
             conversation_history=context.conversation_history,
         )
@@ -181,7 +186,10 @@ class EmberAgent(BaseAgent):
             AgentResponse containing the initial message with subject line
         """
         # Build the first contact prompt with the key embedded
-        system_prompt = build_ember_first_contact_prompt(key)
+        system_prompt = self._prompt_builder.build_first_contact_prompt(
+            persona=self._persona,
+            key=key,
+        )
 
         # Create agent for first contact
         adk_agent = self._create_adk_agent(system_prompt)
@@ -232,6 +240,12 @@ class EmberAgent(BaseAgent):
         if lines and lines[0].lower().startswith("subject:"):
             subject = lines[0][8:].strip()  # Remove "Subject:" prefix
             content = lines[1].strip() if len(lines) > 1 else ""
+
+        logger.info(
+            "First contact generated: subject=%r, content_length=%d",
+            subject,
+            len(content),
+        )
 
         return AgentResponse(
             content=content,
