@@ -1,8 +1,7 @@
-"""Ember agent implementation using Google ADK.
+"""Miro agent implementation using Google ADK.
 
-Ember is an anxious insider who accidentally sent sensitive information
-to the wrong email address. They communicate via email and want the player
-to delete the cryptic key they received.
+Miro is a calm information broker who reaches out via SMS,
+offering to help the player understand what they have.
 """
 
 from __future__ import annotations
@@ -25,12 +24,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class EmberAgent(BaseAgent):
-    """Ember - the anxious whistleblower agent.
+class MiroAgent(BaseAgent):
+    """Miro - the calm information broker agent.
 
-    Ember communicates via email and wants the player to delete a cryptic key
-    they accidentally sent to the wrong address. They are anxious, guilt-ridden,
-    and trying to control a situation that's slipping away from them.
+    Miro communicates via SMS and offers to help the player understand
+    what they've received. They are transactional, curious, and evasive
+    about their own background.
     """
 
     APP_NAME = "argent"
@@ -40,7 +39,7 @@ class EmberAgent(BaseAgent):
         gemini_api_key: str,
         model: str = "gemini-2.5-flash",
     ) -> None:
-        """Initialize the Ember agent.
+        """Initialize the Miro agent.
 
         Args:
             gemini_api_key: Google Gemini API key
@@ -49,7 +48,7 @@ class EmberAgent(BaseAgent):
         self._model = model
 
         # Load persona from single source of truth
-        self._persona = load_character("ember")
+        self._persona = load_character("miro")
         self._prompt_builder = PromptBuilder()
 
         # Set the API key in environment for Google GenAI SDK
@@ -81,10 +80,10 @@ class EmberAgent(BaseAgent):
     def _create_adk_agent(self, system_prompt: str) -> LlmAgent:
         """Create the ADK agent with the given system prompt."""
         return LlmAgent(
-            name="ember",
+            name="miro",
             model=self._model,
             instruction=system_prompt,
-            description="Ember - an anxious insider who accidentally sent something important",
+            description="Miro - a calm information broker offering help",
         )
 
     async def _get_or_create_session(
@@ -114,13 +113,13 @@ class EmberAgent(BaseAgent):
         return self._player_sessions[key]
 
     async def generate_response(self, context: AgentContext) -> AgentResponse:
-        """Generate Ember's response to a player message.
+        """Generate Miro's response to a player message.
 
         Args:
             context: The context for this interaction
 
         Returns:
-            AgentResponse containing Ember's reply
+            AgentResponse containing Miro's reply
         """
         # Build the dynamic system prompt with current context
         system_prompt = self._prompt_builder.build_system_prompt(
@@ -164,48 +163,36 @@ class EmberAgent(BaseAgent):
                     if hasattr(part, "text") and part.text:
                         response_text += part.text
 
-        # Clean up the response
+        # Clean up the response - SMS has no subject lines
         response_text = response_text.strip()
 
-        # Extract subject line if present (format: "Subject: ..." on first line)
-        subject = None
-        content = response_text
-
-        lines = response_text.split("\n", 1)
-        if lines and lines[0].lower().startswith("subject:"):
-            subject = lines[0][8:].strip()
-            content = lines[1].strip() if len(lines) > 1 else ""
-
         logger.debug(
-            "Response generated: subject=%r, content_length=%d",
-            subject,
-            len(content),
+            "Miro response generated: content_length=%d",
+            len(response_text),
         )
 
         # For now, don't calculate trust delta (will be added later)
         return AgentResponse(
-            content=content,
-            subject=subject,
+            content=response_text,
+            subject=None,  # SMS has no subject
             trust_delta=0,
             new_knowledge=[],
         )
 
-    async def generate_first_contact(self, key: str) -> AgentResponse:
-        """Generate Ember's initial contact message with the cryptic key.
+    async def generate_first_contact(self) -> AgentResponse:
+        """Generate Miro's initial contact SMS.
 
-        This is the first message sent to a player when they start the game.
-        It contains the key and establishes Ember's anxious, mysterious tone.
-
-        Args:
-            key: The player's unique key (format: XXXX-XXXX-XXXX-XXXX)
+        This is the first message sent to a player after they receive
+        Ember's key. Miro reaches out cold, offering to help them
+        understand what they have.
 
         Returns:
-            AgentResponse containing the initial message with subject line
+            AgentResponse containing the initial SMS message
         """
-        # Build the first contact prompt with the key embedded
+        # Build the first contact prompt (no key - Miro doesn't have it)
         system_prompt = self._prompt_builder.build_first_contact_prompt(
             persona=self._persona,
-            key=key,
+            key="",  # Miro doesn't send a key
         )
 
         # Create agent for first contact
@@ -222,16 +209,14 @@ class EmberAgent(BaseAgent):
         temp_session = await self._session_service.create_session(
             app_name=self.APP_NAME,
             user_id="system",
-            session_id="first-contact-generation",
+            session_id="miro-first-contact-generation",
         )
 
         # Trigger generation with a simple prompt
         message = types.Content(
             role="user",
             parts=[
-                types.Part(
-                    text="Write the initial email now. Remember to include the key exactly as provided."
-                )
+                types.Part(text="Write the initial SMS message now. Keep it short and intriguing.")
             ],
         )
 
@@ -249,24 +234,14 @@ class EmberAgent(BaseAgent):
 
         response_text = response_text.strip()
 
-        # Try to extract subject line if present (format: "Subject: ..." on first line)
-        subject = None
-        content = response_text
-
-        lines = response_text.split("\n", 1)
-        if lines and lines[0].lower().startswith("subject:"):
-            subject = lines[0][8:].strip()  # Remove "Subject:" prefix
-            content = lines[1].strip() if len(lines) > 1 else ""
-
         logger.info(
-            "First contact generated: subject=%r, content_length=%d",
-            subject,
-            len(content),
+            "Miro first contact generated: content_length=%d",
+            len(response_text),
         )
 
         return AgentResponse(
-            content=content,
-            subject=subject or "You have a new message",
+            content=response_text,
+            subject=None,  # SMS has no subject
             trust_delta=0,
             new_knowledge=[],
         )

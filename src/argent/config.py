@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     allow_web_only_registration: bool = True  # Allow players to register in web-only mode
     web_only_verification_code: str = "123456"  # Fixed code for simulated phone verification
 
+    # Scheduler settings
+    scheduler_force_immediate: bool = False  # Force immediate execution (skip delays for testing)
+
     @property
     def database_url_sync(self) -> str:
         """Get synchronous database URL (for Alembic migrations)."""

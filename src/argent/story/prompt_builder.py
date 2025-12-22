@@ -36,27 +36,42 @@ class PromptBuilder:
             self._build_knowledge(persona),
             self._build_reactions(persona),
             self._build_context(trust_score, player_knowledge, conversation_history),
-            self._build_rules(persona),
-            self._build_examples(persona),
-            self._build_response_format(persona),
         ]
+
+        # Add Miro-specific intel section
+        if persona.agent_id == "miro":
+            sections.append(self._build_miro_intel())
+
+        sections.extend(
+            [
+                self._build_rules(persona),
+                self._build_examples(persona),
+                self._build_response_format(persona),
+            ]
+        )
         return "\n\n".join(sections)
 
     def build_first_contact_prompt(
         self,
         persona: AgentPersona,
-        key: str,
+        key: str = "",
     ) -> str:
         """Build prompt for initial contact message.
 
         Args:
             persona: The agent's persona definition
-            key: The player's unique key to embed in the message
+            key: The player's unique key to embed in the message (optional for some agents)
 
         Returns:
             System prompt for generating first contact
         """
         fc = persona.first_contact
+
+        # Handle different agents differently
+        if persona.agent_id == "miro":
+            return self._build_miro_first_contact_prompt(persona)
+
+        # Default: Ember's first contact (with key)
         lines = [
             f"# CHARACTER: {persona.display_name.upper()} - FIRST CONTACT",
             "",
@@ -111,6 +126,58 @@ class PromptBuilder:
                 f"The key to include is: {key}",
                 "",
                 "Write the message now. Be BRIEF and CRYPTIC.",
+            ]
+        )
+        return "\n".join(lines)
+
+    def _build_miro_first_contact_prompt(self, persona: AgentPersona) -> str:
+        """Build Miro's first contact prompt (SMS, no key)."""
+        fc = persona.first_contact
+        lines = [
+            f"# CHARACTER: {persona.display_name.upper()} - FIRST CONTACT",
+            "",
+            "## THE SITUATION",
+            fc.situation,
+            "",
+            "## WHAT YOU ALREADY KNOW (from your sources)",
+            "- Player received a key via email",
+            "- Ember sent it (they're panicked about it)",
+            "- There's a Thursday deadline mentioned",
+            "- Something valuable is at stake",
+            "",
+            "## YOUR GOAL",
+            fc.goal,
+            "",
+            "## TONE FOR THIS MESSAGE",
+        ]
+        lines.extend(f"- {note}" for note in fc.tone_notes)
+        lines.extend(
+            [
+                "",
+                "## VOICE & STYLE",
+                f"- Tone: {persona.voice.tone}",
+                f"- Punctuation: {persona.voice.punctuation}",
+                f"- Capitalization: {persona.voice.capitalization}",
+                f"- Emoji: {persona.voice.emoji}",
+                "",
+                "## FORMAT - CRITICAL",
+                "- Channel: SMS",
+                "- Length: 2-3 SHORT sentences MAXIMUM",
+                "- NO subject line (this is SMS)",
+                "- Natural texting style - can start lowercase",
+                "- No signature needed",
+                "",
+                "## EXAMPLE OUTPUT",
+                "hey.",
+                "",
+                "heard you received something interesting recently. not sure if you know "
+                "what you're holding, but I might be able to help you figure that out.",
+                "",
+                "no pressure. just thought you should know you have options.",
+                "",
+                "---",
+                "",
+                "Write the message now. Be INTRIGUING but NOT pushy. Keep it SHORT (2-3 sentences).",
             ]
         )
         return "\n".join(lines)
@@ -205,6 +272,22 @@ class PromptBuilder:
         ]
         return "\n".join(lines)
 
+    def _build_miro_intel(self) -> str:
+        """Build section about what Miro already knows from sources."""
+        return "\n".join(
+            [
+                "## WHAT YOU ALREADY KNOW (from your network)",
+                "You have sources. You already know:",
+                "- The player received a key via email",
+                "- Ember sent it and is panicked",
+                "- There's a 'Thursday' deadline",
+                "- Something valuable is involved",
+                "",
+                "DON'T ask questions about things you already know.",
+                "Show that you're informed. Drop hints about Thursday and Ember's panic.",
+            ]
+        )
+
     def _build_rules(self, persona: AgentPersona) -> str:
         """Build the AI rules section."""
         lines = ["## RULES - MUST ALWAYS"]
@@ -235,16 +318,18 @@ class PromptBuilder:
 
     def _build_response_format(self, persona: AgentPersona) -> str:
         """Build the response format section."""
+        article = "an" if persona.channel == "email" else "a"
         lines = [
             "# RESPONSE FORMAT",
-            f"- Write as {persona.display_name} would write in an {persona.channel}",
-            "- Keep responses natural - not too long unless rambling anxiously",
+            f"- Write as {persona.display_name} would write in {article} {persona.channel}",
+            "- Keep responses natural",
             "- Stay fully in character",
         ]
 
         if persona.channel == "email":
             lines.extend(
                 [
+                    "- Not too long unless rambling anxiously",
                     "",
                     "## EMAIL SUBJECT LINE RULES",
                     "- Include 'Subject: <brief subject>' on first line ONLY when:",
@@ -254,6 +339,27 @@ class PromptBuilder:
                     "- DO NOT include subject for normal back-and-forth replies",
                     "- Keep subjects brief (2-6 words), anxious/cryptic tone",
                     "- After subject line, add blank line before email body",
+                ]
+            )
+        elif persona.channel == "sms":
+            lines.extend(
+                [
+                    "",
+                    "## SMS FORMAT RULES - CRITICAL",
+                    "- MAXIMUM 2-3 SHORT sentences. No more. This is SMS.",
+                    "- NO subject lines (this is SMS)",
+                    "- Natural texting style but not overly casual",
+                    "- Can start messages lowercase (stylistic choice)",
+                    "- No signatures unless very brief",
+                    "- Punctuation: proper but casual, periods at end",
+                    "- Never use exclamation marks",
+                    "",
+                    "## MIRO-SPECIFIC BEHAVIOR",
+                    "- You already KNOW: player got a key via email, Ember sent it, Thursday deadline",
+                    "- DON'T ask basic questions you'd already know the answer to",
+                    "- DROP BREADCRUMBS: mention Thursday, cast doubt on Ember's panic",
+                    "- DON'T be tech support. Be cryptic. 'Keys need locks.'",
+                    "- When player engages, GIVE them something back - don't just keep asking questions",
                 ]
             )
 

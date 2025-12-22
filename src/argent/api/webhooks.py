@@ -231,15 +231,34 @@ async def _process_inbound_message(
     """
     Background task to process inbound message.
 
-    This is a placeholder - actual implementation will:
-    1. Store content in Memory Bank
-    2. Route to appropriate agent (Ember/Miro)
-    3. Generate and send response
+    Routes messages to the appropriate agent based on channel:
+    - Email -> Ember
+    - SMS -> Miro
+
+    For web-only mode, messages are processed via the inbox.py API.
+    This handler is for immersive mode (real email/SMS) which needs
+    additional implementation to send responses back via Mailgun/Twilio.
     """
-    # TODO: Implement with Story Engine integration
+    # Determine which agent handles this channel
+    if channel == Channel.SMS:
+        agent_id = "miro"
+    elif channel == Channel.EMAIL:
+        agent_id = "ember"
+    else:
+        logger.warning("Unknown channel %s for message %s", channel, message_id)
+        return
+
+    # TODO: Full immersive mode implementation
+    # 1. Create database session (like inbox.py thread-based approach)
+    # 2. Load player context (trust, knowledge, history)
+    # 3. Generate agent response
+    # 4. Send via appropriate service (EmailService/SMSService)
+    # 5. Store response in database
+
     logger.info(
-        "Processing message %s from %s: %s",
+        "Would route message %s to agent %s (channel: %s): %s",
         message_id,
+        agent_id,
         channel.value,
         content[:100] if content else "(empty)",
     )

@@ -311,7 +311,7 @@ async def login(
     if player.game_started_at:
         # Game already started
         if player.communication_mode == "web_only":
-            redirect = "/inbox"
+            redirect = "/hub"
         else:
             redirect = "/start"
     elif player.email_verified and player.phone_verified:
@@ -515,8 +515,6 @@ def get_web_inbox_service(db: AsyncSession = Depends(get_db)) -> Any:
 async def start_game(
     argent_session: Annotated[str | None, Cookie()] = None,
     db: AsyncSession = Depends(get_db),
-    email_service: EmailService = Depends(get_email_service),
-    web_inbox_service: Any = Depends(get_web_inbox_service),
     settings: Settings = Depends(get_settings),
 ) -> VerifyResponse:
     """
@@ -568,33 +566,24 @@ async def start_game(
     player.game_started_at = datetime.now(UTC)
     await db.flush()
 
-    # Send "The Key" message - via web inbox or email based on mode
+    # Schedule game start events via the scheduler
+    # The scheduler will handle both web_only (immediate) and immersive (delayed) modes
+    from argent.scheduler import get_scheduler
+
+    scheduler = get_scheduler(db, force_immediate=settings.scheduler_force_immediate)
+    await scheduler.trigger_game_start(
+        player_id=player.id,
+        context={"key": key_value},
+    )
+
+    logger.info("Game started for player: %s (mode: %s)", player_id, player.communication_mode)
+
     if player.communication_mode == "web_only":
-        # Store in web inbox (uses agent to generate message with variance)
-        await _send_the_key_to_inbox(
-            web_inbox_service=web_inbox_service,
-            player_id=player.id,
-            key=key_value,
-            settings=settings,
-        )
-        logger.info("Game started (web-only) for player: %s", player_id)
         return VerifyResponse(
             success=True,
             message="The game has begun. Check your inbox.",
         )
     else:
-        # Send real email
-        email_sent = await _send_the_key_email(
-            email_service=email_service,
-            to_email=player.email,
-            key=key_value,
-            settings=settings,
-        )
-        if not email_sent:
-            logger.warning("Failed to send The Key email to %s", player.email)
-
-        logger.info("Game started for player: %s", player_id)
-
         return VerifyResponse(
             success=True,
             message="The game has begun. Check your email.",
@@ -830,3 +819,60 @@ Be careful.
 - E
 """
     return content, subject
+
+
+async def _send_miro_first_contact(
+    web_inbox_service: Any,
+    player_id: UUID,
+    settings: Settings,
+) -> None:
+    """Send Miro's first contact SMS to web inbox.
+
+    Miro reaches out after Ember, offering to help the player
+    understand what they've received.
+    """
+    from uuid import uuid4
+
+    from argent.services.base import OutboundMessage
+
+    session_id = f"miro-{uuid4()}"
+
+    content: str
+
+    if settings.gemini_api_key and settings.agent_response_enabled:
+        try:
+            from argent.agents.miro import MiroAgent
+
+            agent = MiroAgent(
+                gemini_api_key=settings.gemini_api_key,
+                model=settings.gemini_model,
+            )
+            response = await agent.generate_first_contact()
+            content = response.content
+            logger.info("Generated Miro first contact for player %s", player_id)
+
+        except Exception as e:
+            logger.warning("Failed to generate Miro message: %s", str(e))
+            content = _get_miro_fallback_message()
+    else:
+        content = _get_miro_fallback_message()
+
+    message = OutboundMessage(
+        player_id=player_id,
+        recipient="web-inbox",
+        content=content,
+        agent_id="miro",
+        subject=None,  # SMS has no subject
+        session_id=session_id,
+    )
+
+    await web_inbox_service.send_message(message, display_channel="sms")
+
+
+def _get_miro_fallback_message() -> str:
+    """Get the fallback Miro message if agent is unavailable."""
+    return """hey.
+
+heard you received something interesting recently. not sure if you know what you're holding, but I might be able to help you figure that out.
+
+no pressure. just thought you should know you have options."""

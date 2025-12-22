@@ -40,8 +40,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    # Huey worker command - will be enabled when tasks are implemented
-    command: echo "Worker placeholder - Huey tasks not yet implemented"
+    volumes:
+      - ./src:/app/src:ro  # Mount source for development
+    command: huey_consumer.py argent.scheduler.tasks.huey -w 2 -k thread
 
   postgres:
     image: postgres:16-alpine

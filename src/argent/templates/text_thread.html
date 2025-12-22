@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Messages{% endblock %}
+
+{% block content %}
+<div class="sms-page">
+    <div class="sms-header">
+        <a href="/text" class="back-btn">&larr;</a>
+        <div class="sms-contact">
+            <span class="sms-name">{{ title }}</span>
+        </div>
+    </div>
+
+    <div class="sms-messages" id="sms-messages">
+        {% for msg in messages %}
+        <div class="sms-bubble {% if msg.direction == 'inbound' %}sent{% else %}received{% endif %}">
+            <div class="bubble-content">{{ msg.content | replace('\n', '<br>') | safe }}</div>
+            <div class="bubble-time">{{ msg.created_at.strftime('%I:%M %p') }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="sms-input-area">
+        <form id="sms-form" class="sms-form">
+            <input type="hidden" name="session_id" value="{{ session_id }}">
+            <input type="text" id="sms-input" name="content"
+                   placeholder="Text message" autocomplete="off" required>
+            <button type="submit" class="send-btn">&gt;</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.sms-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 80px);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.sms-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.sms-contact {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sms-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.sms-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.sms-bubble {
+    max-width: 80%;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+}
+
+.sms-bubble.received {
+    align-self: flex-start;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+}
+
+.sms-bubble.sent {
+    align-self: flex-end;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--accent-dim);
+}
+
+.bubble-content {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+}
+
+.bubble-time {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.sms-bubble.sent .bubble-time {
+    text-align: right;
+}
+
+.sms-input-area {
+    padding: 1rem 0;
+    border-top: 1px solid var(--border);
+}
+
+.sms-form {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+#sms-input {
+    flex: 1;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+#sms-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+#sms-input::placeholder {
+    color: var(--text-muted);
+}
+
+.send-btn {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.75rem 1.25rem;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.send-btn:hover {
+    background: var(--accent-dim);
+    color: var(--bg-primary);
+    border-color: var(--accent);
+}
+
+.send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Scroll to bottom on load
+const smsMessages = document.getElementById('sms-messages');
+smsMessages.scrollTop = smsMessages.scrollHeight;
+
+// Track message IDs we've seen to detect new ones
+let seenMessageIds = new Set();
+document.querySelectorAll('.sms-bubble').forEach((bubble, i) => {
+    seenMessageIds.add(i);
+});
+
+// Form submission
+document.getElementById('sms-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const input = document.getElementById('sms-input');
+    const content = input.value.trim();
+    if (!content) return;
+
+    const sessionId = this.querySelector('input[name="session_id"]').value;
+    const sendBtn = this.querySelector('.send-btn');
+
+    sendBtn.disabled = true;
+    input.disabled = true;
+
+    // Optimistically add message
+    const bubble = document.createElement('div');
+    bubble.className = 'sms-bubble sent';
+    bubble.innerHTML = `
+        <div class="bubble-content">${content.replace(/\n/g, '<br>')}</div>
+        <div class="bubble-time">sending...</div>
+    `;
+    smsMessages.appendChild(bubble);
+    smsMessages.scrollTop = smsMessages.scrollHeight;
+
+    input.value = '';
+
+    try {
+        const response = await fetch('/api/inbox/compose', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: content,
+                session_id: sessionId
+            })
+        });
+
+        if (response.ok) {
+            bubble.querySelector('.bubble-time').textContent = new Date().toLocaleTimeString([], {
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+            // Start faster polling after sending
+            startFastPolling();
+        } else {
+            bubble.querySelector('.bubble-time').textContent = 'failed';
+            bubble.style.opacity = '0.5';
+        }
+    } catch (err) {
+        bubble.querySelector('.bubble-time').textContent = 'failed';
+        bubble.style.opacity = '0.5';
+    }
+
+    sendBtn.disabled = false;
+    input.disabled = false;
+    input.focus();
+});
+
+// Polling for new messages
+let pollInterval = null;
+let fastPollCount = 0;
+
+function startFastPolling() {
+    // Poll frequently for 30 seconds after sending a message
+    fastPollCount = 15;
+    if (!pollInterval) {
+        pollInterval = setInterval(checkForNewMessages, 2000);
+    }
+}
+
+function checkForNewMessages() {
+    const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_t=' + Date.now();
+    fetch(url, { headers: { 'Accept': 'text/html' }, cache: 'no-store' })
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newBubbles = doc.querySelectorAll('.sms-bubble');
+
+            // Check if there are new messages
+            if (newBubbles.length > seenMessageIds.size) {
+                // Add new messages dynamically
+                const currentBubbles = smsMessages.querySelectorAll('.sms-bubble');
+                for (let i = currentBubbles.length; i < newBubbles.length; i++) {
+                    const newBubble = newBubbles[i].cloneNode(true);
+                    smsMessages.appendChild(newBubble);
+                    seenMessageIds.add(i);
+                }
+                smsMessages.scrollTop = smsMessages.scrollHeight;
+            }
+
+            // Slow down polling after fast period
+            if (fastPollCount > 0) {
+                fastPollCount--;
+            } else if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = setInterval(checkForNewMessages, 10000); // Slow poll every 10s
+            }
+        })
+        .catch(() => {
+            // Ignore errors, keep polling
+        });
+}
+
+// Start slow background polling immediately
+pollInterval = setInterval(checkForNewMessages, 10000);
+</script>
+{% endblock %}

@@ -146,20 +146,19 @@ class WebInboxService(BaseChannelService):
 
         Args:
             player_id: The player's ID
-            channel_filter: Optional filter by original channel type
+            channel_filter: Optional filter by channel ('email' or 'sms')
             limit: Max messages to return
             offset: Pagination offset
 
         Returns:
             List of messages ordered by creation time (newest first)
         """
-        query = (
-            select(Message)
-            .where(Message.player_id == player_id)
-            .order_by(Message.created_at.desc())
-            .limit(limit)
-            .offset(offset)
-        )
+        query = select(Message).where(Message.player_id == player_id)
+
+        if channel_filter:
+            query = query.where(Message.channel == channel_filter)
+
+        query = query.order_by(Message.created_at.desc()).limit(limit).offset(offset)
 
         result = await self._db.execute(query)
         return list(result.scalars().all())
@@ -327,14 +326,22 @@ class WebInboxService(BaseChannelService):
 
         return count
 
-    async def get_unread_count(self, player_id: UUID) -> int:
-        """Get count of unread messages for a player."""
+    async def get_unread_count(self, player_id: UUID, channel_filter: str | None = None) -> int:
+        """Get count of unread messages for a player.
+
+        Args:
+            player_id: The player's ID
+            channel_filter: Optional filter by channel ('email' or 'sms')
+        """
         query = (
             select(Message)
             .where(Message.player_id == player_id)
             .where(Message.read_at.is_(None))
             .where(Message.direction == Direction.OUTBOUND.value)  # Only agent messages
         )
+
+        if channel_filter:
+            query = query.where(Message.channel == channel_filter)
 
         result = await self._db.execute(query)
         return len(list(result.scalars().all()))

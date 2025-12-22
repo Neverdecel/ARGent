@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}ARGent{% endblock %}
+
+{% block content %}
+<div class="hub-page">
+    <div class="hub-header">
+        <h1>ARGent</h1>
+        <p class="hub-subtitle">Choose your channel</p>
+    </div>
+
+    <div class="channel-list">
+        <a href="/inbox" class="channel-item {% if email_unread > 0 %}unread{% endif %}">
+            <div class="channel-icon">[email]</div>
+            <div class="channel-info">
+                <div class="channel-header-row">
+                    <span class="channel-name">Email</span>
+                    {% if email_unread > 0 %}
+                    <span class="channel-badge">{{ email_unread }} new</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+
+        <a href="/text" class="channel-item {% if sms_unread > 0 %}unread{% endif %}">
+            <div class="channel-icon">[sms]</div>
+            <div class="channel-info">
+                <div class="channel-header-row">
+                    <span class="channel-name">Text</span>
+                    {% if sms_unread > 0 %}
+                    <span class="channel-badge">{{ sms_unread }} new</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<style>
+.hub-page {
+    padding-top: 4rem;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.hub-header {
+    margin-bottom: 3rem;
+}
+
+.hub-header h1 {
+    margin-bottom: 0.5rem;
+}
+
+.hub-subtitle {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.channel-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.channel-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1rem;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: background 0.15s;
+}
+
+.channel-item:hover {
+    background-color: var(--bg-secondary);
+    margin: 0 -1rem;
+    padding: 1.25rem 2rem;
+    text-decoration: none;
+}
+
+.channel-item.unread {
+    background-color: rgba(0, 255, 136, 0.03);
+    margin: 0 -1rem;
+    padding: 1.25rem 2rem;
+    border-left: 3px solid var(--accent);
+}
+
+.channel-icon {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    min-width: 50px;
+}
+
+.channel-item.unread .channel-icon {
+    color: var(--accent);
+}
+
+.channel-info {
+    flex: 1;
+}
+
+.channel-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.channel-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.channel-item.unread .channel-name {
+    color: var(--accent);
+}
+
+.channel-badge {
+    font-size: 0.75rem;
+    color: var(--accent);
+}
+</style>
+{% endblock %}
