@@ -570,11 +570,12 @@ async def start_game(
 
     # Send "The Key" message - via web inbox or email based on mode
     if player.communication_mode == "web_only":
-        # Store in web inbox
+        # Store in web inbox (uses agent to generate message with variance)
         await _send_the_key_to_inbox(
             web_inbox_service=web_inbox_service,
             player_id=player.id,
             key=key_value,
+            settings=settings,
         )
         logger.info("Game started (web-only) for player: %s", player_id)
         return VerifyResponse(
@@ -763,48 +764,45 @@ async def _send_the_key_to_inbox(
     web_inbox_service: Any,
     player_id: UUID,
     key: str,
+    settings: Settings,
 ) -> None:
-    """Store 'The Key' message in web inbox for web-only players."""
+    """Store 'The Key' message in web inbox for web-only players.
+
+    Uses the Ember agent to generate the initial message with variance,
+    while ensuring the key is properly embedded.
+    """
+    from uuid import uuid4
+
     from argent.services.base import OutboundMessage
 
-    subject = "You have a new message"
-    content = f"""---
+    # Generate a session ID for this conversation thread
+    session_id = f"ember-{uuid4()}"
 
-This wasn't meant for you.
+    # Try to use the agent to generate the message with variance
+    content: str
+    subject: str
 
-But since you're here... I need you to understand something.
-There's a key. It unlocks something important.
+    if settings.gemini_api_key and settings.agent_response_enabled:
+        try:
+            from argent.agents.ember import EmberAgent
 
-{key}
+            agent = EmberAgent(
+                gemini_api_key=settings.gemini_api_key,
+                model=settings.gemini_model,
+            )
+            response = await agent.generate_first_contact(key)
+            content = response.content
+            subject = response.subject or "You have a new message"
 
-Use before Thursday. Or don't. I can't tell you what to do.
+            logger.info("Generated first contact message via agent for player %s", player_id)
 
-Just... be careful who you talk to about this.
-
-- E
-
----
-
-If you received this in error, please delete it immediately.
-"""
-
-    html_content = f"""<div style="border-left: 2px solid #333; padding-left: 20px;">
-<p style="color: #888;">---</p>
-<p>This wasn't meant for you.</p>
-<p>But since you're here... I need you to understand something.<br>
-There's a key. It unlocks something important.</p>
-<p style="font-size: 18px; background: #1a1a1a; padding: 15px; font-family: monospace; letter-spacing: 2px; color: #00ff88;">
-{key}
-</p>
-<p>Use before Thursday. Or don't. I can't tell you what to do.</p>
-<p>Just... be careful who you talk to about this.</p>
-<p style="margin-top: 30px;">- E</p>
-<p style="color: #888;">---</p>
-</div>
-<p style="color: #555; font-size: 11px; margin-top: 40px; font-style: italic;">
-If you received this in error, please delete it immediately.
-</p>
-"""
+        except Exception as e:
+            logger.warning("Failed to generate agent message, using fallback: %s", str(e))
+            # Fall back to hardcoded message
+            content, subject = _get_fallback_key_message(key)
+    else:
+        # No agent available, use fallback
+        content, subject = _get_fallback_key_message(key)
 
     message = OutboundMessage(
         player_id=player_id,
@@ -812,7 +810,23 @@ If you received this in error, please delete it immediately.
         content=content,
         agent_id="ember",
         subject=subject,
-        html_content=html_content,
+        session_id=session_id,
     )
 
     await web_inbox_service.send_message(message)
+
+
+def _get_fallback_key_message(key: str) -> tuple[str, str]:
+    """Get the fallback hardcoded key message if agent is unavailable."""
+    subject = "It's done"
+    content = f"""Here's the access.
+
+{key}
+
+Use before Thursday. You know what to do.
+
+Be careful.
+
+- E
+"""
+    return content, subject

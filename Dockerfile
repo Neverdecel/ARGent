@@ -22,8 +22,8 @@ COPY src/ ./src/
 COPY tests/ ./tests/
 COPY alembic/ ./alembic/
 
-# Install Python dependencies
-RUN pip install .
+# Install Python dependencies (including agents extras for Google ADK)
+RUN pip install ".[agents]"
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash appuser && \

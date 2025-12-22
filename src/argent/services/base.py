@@ -47,6 +47,7 @@ class OutboundMessage:
     html_content: str | None = None  # HTML version for email
     attachments: list[Attachment] = field(default_factory=list)
     reply_to_external_id: str | None = None  # Thread reference
+    session_id: str | None = None  # Conversation thread ID
 
 
 @dataclass

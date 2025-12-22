@@ -61,9 +61,8 @@ ARGent is in **active development**. The core platform is functional:
 - **Onboarding flow** - Complete with email and phone verification
 - **Web inbox** - Browser-based messaging for non-immersive play
 - **Dual play modes** - Choose between real channels or web-only
+- **AI Agents** - Ember agent powered by Google ADK + Gemini 2.5 Flash
 - **Infrastructure** - Docker deployment, CI/CD, database migrations
-
-**In progress**: AI agent integration with Google ADK/Gemini for dynamic story responses.
 
 We're building in the open—the docs folder contains comprehensive specifications for the story system, technical architecture, and agent personalities.
 
@@ -74,6 +73,7 @@ We're building in the open—the docs folder contains comprehensive specificatio
 - [Technology Choices](docs/TECHNOLOGY_CHOICES.md) - Architecture decisions
 - [Story System](docs/STORY_SYSTEM.md) - How the narrative engine works
 - [Data Architecture](docs/DATA_ARCHITECTURE.md) - Database and memory design
+- [AI Agents](docs/agents/AGENTS.md) - Agent architecture and implementation
 - [Web Inbox](docs/WEB_INBOX.md) - Non-immersive play mode
 - [Immersion Design](docs/IMMERSION_DESIGN.md) - Agent interaction design
 
