@@ -20,7 +20,7 @@ router = APIRouter(tags=["pages"])
 
 # Templates directory
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR), auto_reload=True)
 
 
 def _get_player_id_from_session(

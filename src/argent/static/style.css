@@ -1018,6 +1018,33 @@ a:hover {
     background: var(--bg-primary);
 }
 
+.email-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.reply-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    margin-left: auto;
+}
+
+.close-btn:hover {
+    color: var(--text-primary);
+}
+
 .email-body {
     margin-top: 1rem;
     line-height: 1.6;

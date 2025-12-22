@@ -15,7 +15,10 @@
     <div class="thread-messages">
         {% for msg in messages %}
         <div class="thread-email {% if msg.id == focused_message_id %}expanded{% else %}collapsed{% endif %}"
-             data-message-id="{{ msg.id }}">
+             data-message-id="{{ msg.id }}"
+             data-sender="{{ msg.sender_name or 'Unknown' }}"
+             data-date="{{ msg.created_at.strftime('%b %d, %Y at %I:%M %p') }}"
+             data-content="{{ msg.content | e }}">
 
             <!-- Collapsed view (clickable header) -->
             <div class="email-collapsed-header" onclick="toggleEmail(this)">
@@ -66,15 +69,24 @@
                     {{ (msg.content or '') | replace('\n', '<br>') | safe }}
                     {% endif %}
                 </div>
+                {% if loop.first %}
+                <div class="email-actions">
+                    <button type="button" class="btn btn-secondary reply-btn" onclick="showReplyForm(this)">
+                        Reply
+                    </button>
+                </div>
+                {% endif %}
             </div>
         </div>
+        {% endfor %}
+    </div>
 
-        {% if loop.first %}
-        <!-- Reply form - appears after newest message -->
-        <div class="reply-section">
+    <!-- Reply form - hidden by default, shown when clicking Reply -->
+    <div id="reply-section" class="reply-section" style="display: none;">
         <div class="compose-card">
             <div class="compose-header">
                 <span class="compose-title">Reply</span>
+                <button type="button" class="close-btn" onclick="hideReplyForm()">&times;</button>
             </div>
             <form id="reply-form" class="compose-form">
                 <input type="hidden" name="session_id" value="{{ session_id }}">
@@ -108,38 +120,32 @@
                               placeholder="Write your reply..." rows="6" required></textarea>
 
                     <!-- Quoted message (collapsed by default) -->
-                    {% if messages|length > 0 %}
                     <div class="quoted-message-container">
                         <button type="button" class="quote-toggle" onclick="toggleQuote()">
                             <span class="quote-icon">▶</span> Show quoted text
                         </button>
                         <div class="quoted-message" style="display: none;">
-                            {% set last_msg = messages[0] %}
-                            <div class="quote-header">
-                                On {{ last_msg.created_at.strftime('%b %d, %Y at %I:%M %p') }}, {{ last_msg.sender_name }} wrote:
-                            </div>
-                            <div class="quote-content">{{ last_msg.content }}</div>
+                            <div id="quote-header" class="quote-header"></div>
+                            <div id="quote-content" class="quote-content"></div>
                         </div>
                     </div>
-                    {% endif %}
                 </div>
 
                 <!-- Actions -->
                 <div class="compose-actions">
                     <button type="submit" class="btn btn-primary">Send</button>
-                    <button type="button" class="btn btn-secondary" onclick="discardReply()">Discard</button>
+                    <button type="button" class="btn btn-secondary" onclick="hideReplyForm()">Cancel</button>
                 </div>
             </form>
         </div>
-    </div>
-        {% endif %}
-        {% endfor %}
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+let replyingToMessageId = null;
+
 function toggleEmail(header) {
     const email = header.closest('.thread-email');
     const wasExpanded = email.classList.contains('expanded');
@@ -154,9 +160,46 @@ function toggleEmail(header) {
     }
 }
 
-console.log('Thread page script loaded');
+function showReplyForm(button) {
+    const emailEl = button.closest('.thread-email');
+    const sender = emailEl.dataset.sender;
+    const date = emailEl.dataset.date;
+    const content = emailEl.dataset.content;
 
-// Quote toggle handler
+    replyingToMessageId = emailEl.dataset.messageId;
+
+    // Update quoted text
+    document.getElementById('quote-header').textContent = `On ${date}, ${sender} wrote:`;
+    document.getElementById('quote-content').textContent = content;
+
+    // Show reply section
+    const replySection = document.getElementById('reply-section');
+    replySection.style.display = 'block';
+
+    // Move reply section after the clicked message
+    emailEl.after(replySection);
+
+    // Focus the textarea
+    document.getElementById('reply-content').focus();
+
+    // Scroll to reply form
+    replySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function hideReplyForm() {
+    const replySection = document.getElementById('reply-section');
+    replySection.style.display = 'none';
+    document.getElementById('reply-content').value = '';
+
+    // Reset quoted text visibility
+    const quote = document.querySelector('.quoted-message');
+    if (quote) quote.style.display = 'none';
+    const toggle = document.querySelector('.quote-toggle');
+    if (toggle) toggle.innerHTML = '<span class="quote-icon">▶</span> Show quoted text';
+
+    replyingToMessageId = null;
+}
+
 function toggleQuote() {
     const container = document.querySelector('.quoted-message-container');
     if (!container) return;
@@ -174,14 +217,6 @@ function toggleQuote() {
         quote.style.display = 'none';
         if (icon) icon.classList.remove('expanded');
         if (toggle) toggle.innerHTML = '<span class="quote-icon">▶</span> Show quoted text';
-    }
-}
-
-// Discard reply handler
-function discardReply() {
-    if (confirm('Discard this reply?')) {
-        document.getElementById('reply-content').value = '';
-        document.getElementById('reply-subject').value = '{% if thread_subject %}Re: {{ thread_subject }}{% endif %}';
     }
 }
 
@@ -218,7 +253,6 @@ document.getElementById('reply-form').addEventListener('submit', async function(
 
         if (response.ok) {
             // Reload immediately to show user's message
-            // Agent response will appear when ready (auto-refresh below)
             window.location.reload();
         } else {
             const error = await response.json();
@@ -234,7 +268,6 @@ document.getElementById('reply-form').addEventListener('submit', async function(
 });
 
 // Auto-refresh to check for new messages (agent responses)
-// Check every 3 seconds, stop after 30 seconds
 let refreshCount = 0;
 const maxRefreshes = 10;
 const initialMessageCount = document.querySelectorAll('.thread-email').length;
@@ -242,8 +275,13 @@ const initialMessageCount = document.querySelectorAll('.thread-email').length;
 function checkForNewMessages() {
     if (refreshCount >= maxRefreshes) return;
 
+    // Don't refresh if user is composing a reply
+    if (document.getElementById('reply-section').style.display !== 'none') {
+        setTimeout(checkForNewMessages, 3000);
+        return;
+    }
+
     refreshCount++;
-    // Add cache-busting timestamp
     const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_t=' + Date.now();
     fetch(url, {
         headers: { 'Accept': 'text/html' },
@@ -255,31 +293,22 @@ function checkForNewMessages() {
             const doc = parser.parseFromString(html, 'text/html');
             const newMessageCount = doc.querySelectorAll('.thread-email').length;
 
-            console.log('Polling: initial=' + initialMessageCount + ', current=' + newMessageCount);
-
             if (newMessageCount > initialMessageCount) {
-                // New message arrived, reload to show it
-                console.log('New message detected, reloading...');
                 window.location.reload();
             } else if (refreshCount < maxRefreshes) {
-                // Keep checking
                 setTimeout(checkForNewMessages, 3000);
             }
         })
-        .catch((err) => {
-            console.error('Polling error:', err);
-            // On error, keep trying
+        .catch(() => {
             if (refreshCount < maxRefreshes) {
                 setTimeout(checkForNewMessages, 3000);
             }
         });
 }
 
-// Start checking for new messages after page load
-console.log('Starting message polling, initial count:', initialMessageCount);
 setTimeout(checkForNewMessages, 3000);
 
-// Initialize expand icons based on state
+// Initialize expand icons
 document.querySelectorAll('.thread-email').forEach(email => {
     const icon = email.querySelector('.email-expand-icon');
     if (icon) {
