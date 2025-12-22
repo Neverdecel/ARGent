@@ -9,87 +9,137 @@
   <img src="resources/landingpage-screenshot.png" alt="ARGent Landing Page" width="400">
 </p>
 
-**An AI-driven alternate reality game**
+> *You receive an email. Short. Cryptic. A string of characters you don't recognize.*
+>
+> *"Use this before Thursday."*
+>
+> *It wasn't meant for you. But now people are reaching out—each with a different story about what you're holding. Each wanting something. You don't know who to trust.*
+>
+> *Maybe no one.*
 
-ARGent is an open-source alternate reality game (ARG) powered by AI agents. Players receive messages from AI characters through real-world channels—email and SMS—as part of an unfolding mystery narrative. The game blurs the line between fiction and reality, creating an immersive experience that integrates into daily life.
+---
+
+**ARGent** is an AI-driven alternate reality game where the story finds you through your inbox. No app to check. No game interface. Just messages from AI characters who remember everything, adapt to your choices, and blur the line between fiction and reality.
+
+## The Experience
+
+**Day 1** — A misdirected email arrives. Cryptic content. No context.
+
+**Hours later** — Someone reaches out, panicked: *"I made a mistake. Please don't share that with anyone."*
+
+**The next morning** — A message from an unknown number: *"Heard you received something interesting. I might be able to help."*
+
+How did they get your number? Who's telling the truth? What did you actually receive?
+
+**Trust is the game.** Not puzzles. Not plot points. Deciding who to believe—and living with the consequences.
 
 ## How It Works
 
-1. **Register** with your email and phone number
+1. **Register** with your email (and optionally phone)
 2. **Receive** a cryptic misdirected message containing an access key
-3. **Navigate** conflicting information from AI agents who each have their own agenda
-4. **Decide** who to trust as the story adapts to your choices
+3. **Navigate** conflicting stories from AI agents with their own agendas
+4. **Decide** who to trust as the narrative adapts to your choices
 
-Every player gets a unique experience. The AI agents remember your conversations, adapt to your engagement style, and reference your past decisions.
-
-## Features
-
-- **Real Communication Channels** - Messages arrive via email and SMS, not a game interface
-- **Persistent AI Agents** - Characters with distinct personalities that remember everything
-- **Adaptive Narrative** - Story pacing and content adjust based on your choices and engagement
-- **Trust Mechanics** - Your decisions affect relationships with agents and unlock different story paths
-- **Self-Hostable** - Run your own instance with full control over your data
+Every player's experience is unique. The AI agents remember your conversations, notice what you reveal (and what you hide), and reference your past decisions.
 
 ## Play Modes
 
-ARGent supports two ways to play:
-
 | Mode | Description |
 |------|-------------|
-| **Immersive** | Messages arrive via real email and SMS, blurring the line between game and reality |
-| **Web-Only** | All messages appear in a browser inbox—no phone number required |
+| **Immersive** | Messages arrive via real email and SMS throughout your day |
+| **Web-Only** | All messages in a browser inbox—no phone required |
 
-Choose your experience during registration.
+## The Agents
+
+Characters reach out through different channels. Each has their own personality, their own claims, their own angle.
+
+| Agent | Channel | Vibe |
+|-------|---------|------|
+| **Ember** | Email | Anxious insider who made a mistake. Wants to undo it. |
+| **Miro** | SMS | Smooth information broker. Helpful, but what's their angle? |
+| **Cipher** | — | The intended recipient. Cold. Technical. A problem to solve. |
+| **Kessler** | — | Corporate fixer. Polite. Professional. Unsettling. |
+
+*More agents enter based on your choices and how the story escalates.*
+
+## Features
+
+- **Real channels** — Messages arrive via email and SMS, not a game interface
+- **Persistent memory** — Agents remember everything across conversations
+- **Adaptive narrative** — Story pacing adjusts to your engagement
+- **Trust mechanics** — Relationships evolve based on your choices
+- **Self-hostable** — Run your own instance, own your data
+
+## Getting Started
+
+### Prerequisites
+
+- Docker and Docker Compose
+- Google Gemini API key
+
+### Quick Start
+
+```bash
+git clone https://github.com/Neverdecel/argent.git
+cd argent
+cp .env.example .env.local
+# Add your GEMINI_API_KEY to .env.local
+
+docker compose up -d
+```
+
+Open http://localhost:8000 and register. Use **web-only mode** for quick testing.
+
+### Development
+
+```bash
+# Run tests
+source .venv/bin/activate
+pytest
+
+# Test agent prompts
+python scripts/test_first_contact.py --prompt-only
+
+# Test with API
+docker compose exec app python /app/scripts/test_first_contact.py
+```
 
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| AI Agents | Google ADK + Gemini 2.5 |
-| Memory | Google Memory Bank (Vertex AI) |
+| AI Agents | Google ADK + Gemini 2.5 Flash |
 | Backend | FastAPI (Python) |
 | Database | PostgreSQL |
-| Task Queue | Redis + Huey |
+| Queue | Redis + Huey |
 | Email | Mailgun |
 | SMS | Twilio |
-| Deployment | Docker Compose / k3s |
 
 ## Project Status
 
-ARGent is in **active development**. The core platform is functional:
+ARGent is in **active development**. Current state:
 
-- **Onboarding flow** - Complete with email and phone verification
-- **Web inbox** - Browser-based messaging for non-immersive play
-- **Dual play modes** - Choose between real channels or web-only
-- **Infrastructure** - Docker deployment, CI/CD, database migrations
-
-**In progress**: AI agent integration with Google ADK/Gemini for dynamic story responses.
-
-We're building in the open—the docs folder contains comprehensive specifications for the story system, technical architecture, and agent personalities.
+- [x] Onboarding flow with verification
+- [x] Web inbox for browser-based play
+- [x] Ember agent with dynamic prompts
+- [x] Avatar and conversation UI
+- [x] Docker deployment
+- [ ] Miro agent (SMS)
+- [ ] Multi-agent orchestration
+- [ ] Long-term memory persistence
 
 ## Documentation
 
-- [Project Vision](docs/PROJECT_VISION.md) - Core concept and goals
-- [Features & Requirements](docs/FEATURES_AND_REQUIREMENTS.md) - Detailed specifications
-- [Technology Choices](docs/TECHNOLOGY_CHOICES.md) - Architecture decisions
-- [Story System](docs/STORY_SYSTEM.md) - How the narrative engine works
-- [Data Architecture](docs/DATA_ARCHITECTURE.md) - Database and memory design
-- [Web Inbox](docs/WEB_INBOX.md) - Non-immersive play mode
-- [Immersion Design](docs/IMMERSION_DESIGN.md) - Agent interaction design
-
-### Story & Characters
-
-- [Premise](docs/story/PREMISE.md) - The opening hook
-- [Ember](docs/story/agents/ember.md) - The anxious insider (Email)
-- [Miro](docs/story/agents/miro.md) - The information broker (SMS)
-
-## Getting Started
-
-> Coming soon—implementation is in progress.
+| Topic | Link |
+|-------|------|
+| Project Vision | [docs/PROJECT_VISION.md](docs/PROJECT_VISION.md) |
+| Story Premise | [docs/story/PREMISE.md](docs/story/PREMISE.md) |
+| Agent Design | [docs/agents/AGENTS.md](docs/agents/AGENTS.md) |
+| Tech Decisions | [docs/TECHNOLOGY_CHOICES.md](docs/TECHNOLOGY_CHOICES.md) |
 
 ## Contributing
 
-ARGent is open source under the MIT License. Contributions are welcome once the core implementation is in place.
+ARGent is open source under the MIT License. We're building in the open—contributions welcome.
 
 ## License
 
@@ -97,4 +147,6 @@ ARGent is open source under the MIT License. Contributions are welcome once the 
 
 ---
 
-**ARGent** - Where AI agents play the game with you.
+<p align="center">
+  <strong>ARGent</strong> — Where AI agents play the game with you.
+</p>

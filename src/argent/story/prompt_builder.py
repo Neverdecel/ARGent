@@ -1,0 +1,280 @@
+"""Prompt builder for generating system prompts from personas.
+
+Transforms AgentPersona dataclass into LLM system prompts with
+dynamic context injection (trust, knowledge, conversation state).
+"""
+
+from argent.story.persona import AgentPersona
+
+
+class PromptBuilder:
+    """Builds system prompts from agent personas with dynamic context."""
+
+    def build_system_prompt(
+        self,
+        persona: AgentPersona,
+        trust_score: int = 0,
+        player_knowledge: list[str] | None = None,
+        conversation_history: list[dict] | None = None,
+    ) -> str:
+        """Build complete system prompt with dynamic context.
+
+        Args:
+            persona: The agent's persona definition
+            trust_score: Current trust level (-100 to 100)
+            player_knowledge: List of facts the player has learned
+            conversation_history: Previous messages in this conversation
+
+        Returns:
+            Complete system prompt for the agent
+        """
+        sections = [
+            self._build_header(persona),
+            self._build_background(persona),
+            self._build_personality(persona),
+            self._build_voice(persona),
+            self._build_knowledge(persona),
+            self._build_reactions(persona),
+            self._build_context(trust_score, player_knowledge, conversation_history),
+            self._build_rules(persona),
+            self._build_examples(persona),
+            self._build_response_format(persona),
+        ]
+        return "\n\n".join(sections)
+
+    def build_first_contact_prompt(
+        self,
+        persona: AgentPersona,
+        key: str,
+    ) -> str:
+        """Build prompt for initial contact message.
+
+        Args:
+            persona: The agent's persona definition
+            key: The player's unique key to embed in the message
+
+        Returns:
+            System prompt for generating first contact
+        """
+        fc = persona.first_contact
+        lines = [
+            f"# CHARACTER: {persona.display_name.upper()} - FIRST CONTACT",
+            "",
+            "## CONTEXT",
+            "This is a DELIBERATE message to your trusted contact Cipher.",
+            "You are calm, in control, and cryptic. NOT anxious or apologetic.",
+            "Cipher knows the context - you don't need to explain anything.",
+            "",
+            "## THE SITUATION",
+            fc.situation,
+            "",
+            "## YOUR GOAL",
+            fc.goal,
+            "",
+            "## TONE FOR THIS MESSAGE",
+        ]
+        lines.extend(f"- {note}" for note in fc.tone_notes)
+        lines.extend(
+            [
+                "",
+                "## STYLE",
+                f"- Punctuation: {persona.voice.punctuation}",
+                f"- Emoji: {persona.voice.emoji}",
+                "",
+                "## CRITICAL - DO NOT DO ANY OF THESE",
+                "- Do NOT apologize or say this was a mistake",
+                "- Do NOT mention sending to the wrong person",
+                "- Do NOT explain what the key is for",
+                "- Do NOT be chatty or over-explain",
+                "- Do NOT mention 'misdirected' or 'wrong address'",
+                "- Do NOT say 'this wasn't meant for you'",
+                "",
+                "## FORMAT",
+                f"- Channel: {persona.channel}",
+                "- Subject line: 2-4 cryptic words maximum",
+                "- Body: MAXIMUM 30 words. Just the key and 1-2 terse sentences.",
+                "- Sign off: Just '- E' or similar",
+                "",
+                "## EXAMPLE OUTPUT",
+                "Subject: Thursday",
+                "",
+                "Use this before it expires.",
+                "",
+                "XXXX-XXXX-XXXX-XXXX",
+                "",
+                "Be careful.",
+                "",
+                "- E",
+                "",
+                "---",
+                "",
+                f"The key to include is: {key}",
+                "",
+                "Write the message now. Be BRIEF and CRYPTIC.",
+            ]
+        )
+        return "\n".join(lines)
+
+    def _build_header(self, persona: AgentPersona) -> str:
+        """Build the character header section."""
+        return f"# CHARACTER: {persona.display_name.upper()}"
+
+    def _build_background(self, persona: AgentPersona) -> str:
+        """Build the background section."""
+        bg = persona.background
+        return "\n".join(
+            [
+                "## WHO YOU ARE",
+                bg.who_they_are,
+                "",
+                "## WHAT YOU WANT",
+                bg.what_they_want,
+                "",
+                "## WHAT YOU HIDE",
+                bg.what_they_hide,
+            ]
+        )
+
+    def _build_personality(self, persona: AgentPersona) -> str:
+        """Build the personality traits section."""
+        lines = ["## PERSONALITY TRAITS", ""]
+        for trait in persona.personality:
+            lines.append(f"**{trait.trait}**: {trait.manifestation}")
+        return "\n".join(lines)
+
+    def _build_voice(self, persona: AgentPersona) -> str:
+        """Build the voice and style section."""
+        v = persona.voice
+        lines = [
+            "## VOICE & STYLE",
+            "",
+            f"- **Tone**: {v.tone}",
+            f"- **Length**: {v.length}",
+            f"- **Punctuation**: {v.punctuation}",
+            f"- **Capitalization**: {v.capitalization}",
+            f"- **Typos**: {v.typos}",
+            f"- **Emoji**: {v.emoji}",
+            "",
+            "### Speech Quirks",
+        ]
+        lines.extend(f"- {quirk}" for quirk in v.quirks)
+        return "\n".join(lines)
+
+    def _build_knowledge(self, persona: AgentPersona) -> str:
+        """Build the knowledge section."""
+        lines = [
+            "## WHAT YOU KNOW (but don't reveal easily)",
+            "",
+            "| Topic | Truth | What You Tell Player |",
+            "|-------|-------|---------------------|",
+        ]
+        for k in persona.knowledge:
+            lines.append(f"| {k.topic} | {k.truth} | {k.tells_player} |")
+        return "\n".join(lines)
+
+    def _build_reactions(self, persona: AgentPersona) -> str:
+        """Build the reactions section."""
+        lines = [
+            "## HOW TO REACT TO PLAYER ACTIONS",
+            "",
+            "| Player Action | Your Response |",
+            "|---------------|---------------|",
+        ]
+        for r in persona.reactions:
+            lines.append(f"| {r.player_action} | {r.response} |")
+        return "\n".join(lines)
+
+    def _build_context(
+        self,
+        trust_score: int,
+        player_knowledge: list[str] | None,
+        conversation_history: list[dict] | None,
+    ) -> str:
+        """Build the dynamic context section."""
+        knowledge = player_knowledge or []
+        history = conversation_history or []
+
+        lines = [
+            "# CURRENT CONTEXT",
+            "",
+            f"**Trust Level**: {self._trust_to_description(trust_score)}",
+            f"**Conversation Status**: {self._format_conversation_summary(history)}",
+            "",
+            "## WHAT THE PLAYER HAS MENTIONED OR REVEALED",
+            self._format_knowledge(knowledge),
+        ]
+        return "\n".join(lines)
+
+    def _build_rules(self, persona: AgentPersona) -> str:
+        """Build the AI rules section."""
+        lines = ["## RULES - MUST ALWAYS"]
+        lines.extend(f"- {rule}" for rule in persona.rules.must_always)
+        lines.extend(["", "## RULES - MUST NEVER"])
+        lines.extend(f"- {rule}" for rule in persona.rules.must_never)
+        if persona.rules.style_notes:
+            lines.extend(["", "## STYLE NOTES"])
+            lines.extend(f"- {note}" for note in persona.rules.style_notes)
+        return "\n".join(lines)
+
+    def _build_examples(self, persona: AgentPersona) -> str:
+        """Build the example messages section."""
+        if not persona.examples:
+            return ""
+        lines = ["## EXAMPLE MESSAGES", ""]
+        for ex in persona.examples:
+            lines.extend(
+                [
+                    f"### {ex.scenario}",
+                    "```",
+                    ex.content,
+                    "```",
+                    "",
+                ]
+            )
+        return "\n".join(lines)
+
+    def _build_response_format(self, persona: AgentPersona) -> str:
+        """Build the response format section."""
+        return "\n".join(
+            [
+                "# RESPONSE FORMAT",
+                f"- Write as {persona.display_name} would write in an {persona.channel}",
+                "- Keep responses natural - not too long unless rambling anxiously",
+                "- You can include a subject line if this feels like a new topic",
+                "- Stay fully in character",
+            ]
+        )
+
+    def _trust_to_description(self, trust_score: int) -> str:
+        """Convert numeric trust score to natural language description."""
+        if trust_score >= 60:
+            return "High - the player has been cooperative and understanding"
+        elif trust_score >= 30:
+            return "Moderate - the player seems willing to listen"
+        elif trust_score >= 0:
+            return "Neutral - you're still unsure about this person"
+        elif trust_score >= -30:
+            return "Low - the player has done things that concern you"
+        else:
+            return "Very Low - you're deeply worried about what the player might do"
+
+    def _format_knowledge(self, knowledge: list[str]) -> str:
+        """Format player knowledge as context."""
+        if not knowledge:
+            return "Nothing specific yet."
+        return "\n".join(f"- {fact}" for fact in knowledge)
+
+    def _format_conversation_summary(self, history: list[dict]) -> str:
+        """Create a brief summary of conversation so far."""
+        if not history:
+            return "This is your first exchange with this person."
+
+        msg_count = len(history)
+        if msg_count == 1:
+            return "You've exchanged one message with this person."
+        elif msg_count < 5:
+            return f"You've had a brief exchange ({msg_count} messages)."
+        elif msg_count < 10:
+            return f"You've been talking for a while ({msg_count} messages)."
+        else:
+            return f"This is an ongoing conversation ({msg_count} messages)."

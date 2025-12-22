@@ -15,6 +15,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - DEBUG=${DEBUG:-true}
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - WATCHFILES_FORCE_POLLING=true  # Fix hot reload in Docker
     depends_on:
       postgres:
         condition: service_healthy
@@ -24,6 +25,7 @@ services:
       - ./src:/app/src:ro  # Mount source for development
       - ./alembic:/app/alembic  # Mount alembic for migrations
       - ./pyproject.toml:/app/pyproject.toml:ro  # Mount config for dev tools
+      - ./scripts:/app/scripts:ro  # Mount scripts for debugging
     command: uvicorn argent.main:app --host 0.0.0.0 --port 8000 --reload
 
   worker:

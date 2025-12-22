@@ -8,8 +8,11 @@ Provides:
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from argent.agents.base import BaseAgent
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -21,7 +24,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from argent.config import Settings, get_settings
 from argent.database import get_db
 from argent.models import Player
+from argent.models.player import Message, PlayerKnowledge, PlayerTrust
+from argent.services.base import OutboundMessage
 from argent.services.web_inbox import WebInboxService
+from argent.story import load_character
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +138,126 @@ def _get_web_inbox_service(db: AsyncSession) -> WebInboxService:
     return WebInboxService(db)
 
 
+def _get_agent_avatar_url(agent_id: str | None) -> str | None:
+    """Get the avatar URL for an agent."""
+    if not agent_id:
+        return None
+    try:
+        persona = load_character(agent_id)
+        if persona.avatar:
+            return f"/static/avatars/{persona.avatar}"
+    except ValueError:
+        pass
+    return None
+
+
+async def _get_session_agent_id(
+    db: AsyncSession,
+    player_id: UUID,
+    session_id: str,
+) -> str | None:
+    """Determine which agent a conversation session belongs to.
+
+    Looks at existing messages in the session to find the agent_id
+    from outbound (agent) messages.
+    """
+    result = await db.execute(
+        select(Message.agent_id)
+        .where(Message.player_id == player_id)
+        .where(Message.session_id == session_id)
+        .where(Message.agent_id.isnot(None))
+        .limit(1)
+    )
+    agent_id = result.scalar_one_or_none()
+    return agent_id
+
+
+async def _get_player_trust_score(
+    db: AsyncSession,
+    player_id: UUID,
+    agent_id: str,
+) -> int:
+    """Get current trust score for a player with a specific agent."""
+    result = await db.execute(
+        select(PlayerTrust.trust_score)
+        .where(PlayerTrust.player_id == player_id)
+        .where(PlayerTrust.agent_id == agent_id)
+    )
+    score = result.scalar_one_or_none()
+    return score or 0
+
+
+async def _get_player_knowledge(
+    db: AsyncSession,
+    player_id: UUID,
+) -> list[str]:
+    """Get all facts the player has learned."""
+    result = await db.execute(
+        select(PlayerKnowledge.fact).where(PlayerKnowledge.player_id == player_id)
+    )
+    return [row[0] for row in result.all()]
+
+
+async def _get_conversation_history(
+    db: AsyncSession,
+    player_id: UUID,
+    session_id: str,
+    limit: int = 20,
+) -> list[dict]:
+    """Get recent conversation history for context.
+
+    Returns messages in chronological order (oldest first).
+    """
+    result = await db.execute(
+        select(Message)
+        .where(Message.player_id == player_id)
+        .where(Message.session_id == session_id)
+        .order_by(Message.created_at.desc())
+        .limit(limit)
+    )
+    messages = list(result.scalars().all())
+
+    # Reverse to get chronological order
+    messages.reverse()
+
+    return [
+        {
+            "role": "user" if msg.direction == "inbound" else "assistant",
+            "content": msg.content or "",
+            "sender": msg.sender_name,
+        }
+        for msg in messages
+    ]
+
+
+# Agent instance cache (simple singleton pattern for MVP)
+_agent_instances: dict = {}
+
+
+def _get_agent(agent_id: str, settings: Settings) -> "BaseAgent | None":
+    """Get or create an agent instance.
+
+    Uses a simple cache to avoid recreating agents on every request.
+    """
+    if not settings.gemini_api_key:
+        return None
+
+    if agent_id not in _agent_instances:
+        if agent_id == "ember":
+            from argent.agents.ember import EmberAgent
+
+            _agent_instances[agent_id] = EmberAgent(
+                gemini_api_key=settings.gemini_api_key,
+                model=settings.gemini_model,
+            )
+        # Add more agents here as they're implemented
+        # elif agent_id == "miro":
+        #     from argent.agents.miro import MiroAgent
+        #     _agent_instances[agent_id] = MiroAgent(...)
+
+    return _agent_instances.get(agent_id)
+
+
 # --- Page Routes ---
 
 
@@ -224,13 +350,31 @@ async def conversation_page(
     participants = {m.sender_name for m in messages if m.sender_name and m.sender_name != "You"}
     title = ", ".join(sorted(participants)) if participants else "Conversation"
 
+    # Add avatar URLs to messages
+    messages_with_avatars = [
+        {
+            "id": msg.id,
+            "channel": msg.channel,
+            "direction": msg.direction,
+            "sender_name": msg.sender_name,
+            "subject": msg.subject,
+            "content": msg.content,
+            "html_content": msg.html_content,
+            "created_at": msg.created_at,
+            "read_at": msg.read_at,
+            "session_id": msg.session_id,
+            "avatar_url": _get_agent_avatar_url(msg.agent_id),
+        }
+        for msg in messages
+    ]
+
     return templates.TemplateResponse(
         "conversation.html",
         {
             "request": request,
             "session_id": session_id,
             "title": title,
-            "messages": messages,
+            "messages": messages_with_avatars,
             "player": player,
         },
     )
@@ -369,7 +513,7 @@ async def compose_message(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> MessageDetail:
-    """Compose and send a new message (queued for agent processing)."""
+    """Compose and send a new message, get immediate agent response."""
     if not settings.web_inbox_enabled:
         raise HTTPException(status_code=404, detail="Web inbox not enabled")
 
@@ -386,15 +530,89 @@ async def compose_message(
         subject=request_body.subject,
         session_id=request_body.session_id,
     )
-    await db.commit()
 
-    # TODO: Queue background task for agent response
-    # This will be handled by the story engine when implemented
-    logger.info(
-        "Player %s sent message in session %s - agent response pending",
-        player.id,
-        request_body.session_id,
-    )
+    # Generate agent response if enabled and session exists
+    if settings.agent_response_enabled and request_body.session_id:
+        # Determine which agent this conversation is with
+        agent_id = await _get_session_agent_id(db, player.id, request_body.session_id)
+
+        if agent_id:
+            agent = _get_agent(agent_id, settings)
+
+            if agent:
+                try:
+                    # Build agent context
+                    from argent.agents.base import AgentContext
+
+                    trust_score = await _get_player_trust_score(db, player.id, agent_id)
+                    knowledge = await _get_player_knowledge(db, player.id)
+                    history = await _get_conversation_history(
+                        db, player.id, request_body.session_id
+                    )
+
+                    context = AgentContext(
+                        player_id=player.id,
+                        session_id=request_body.session_id,
+                        player_message=request_body.content,
+                        conversation_history=history,
+                        player_trust_score=trust_score,
+                        player_knowledge=knowledge,
+                    )
+
+                    # Generate response
+                    response = await agent.generate_response(context)
+
+                    # Store agent response
+                    await inbox_service.send_message(
+                        OutboundMessage(
+                            player_id=player.id,
+                            recipient="",  # Not used for web inbox
+                            content=response.content,
+                            agent_id=agent_id,
+                            subject=response.subject,
+                        ),
+                        display_channel="email" if agent_id == "ember" else "sms",
+                    )
+
+                    # Update session_id on the agent's response message
+                    # (The send_message doesn't set session_id, so we need to update it)
+                    result = await db.execute(
+                        select(Message)
+                        .where(Message.player_id == player.id)
+                        .where(Message.agent_id == agent_id)
+                        .order_by(Message.created_at.desc())
+                        .limit(1)
+                    )
+                    agent_message = result.scalar_one_or_none()
+                    if agent_message:
+                        agent_message.session_id = request_body.session_id
+
+                    logger.info(
+                        "Agent %s responded to player %s in session %s",
+                        agent_id,
+                        player.id,
+                        request_body.session_id,
+                    )
+
+                except Exception as e:
+                    logger.error(
+                        "Failed to generate agent response: %s",
+                        str(e),
+                        exc_info=True,
+                    )
+                    # Don't fail the request - player message is still saved
+            else:
+                logger.warning(
+                    "No agent available for %s (API key may be missing)",
+                    agent_id,
+                )
+        else:
+            logger.debug(
+                "No agent found for session %s - may be a new conversation",
+                request_body.session_id,
+            )
+
+    await db.commit()
 
     return MessageDetail(
         id=message.id,

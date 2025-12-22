@@ -63,7 +63,7 @@ class WebInboxService(BaseChannelService):
             channel=display_channel,  # 'email' or 'sms' for display/filtering
             direction=Direction.OUTBOUND.value,
             external_id=f"web-{message_id}",
-            session_id=None,  # Will be set by caller if threading
+            session_id=message.session_id,  # For conversation threading
             subject=message.subject,
             content=message.content,
             html_content=message.html_content,

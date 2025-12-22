@@ -27,8 +27,12 @@ class Settings(BaseSettings):
 
     # Google Cloud / Gemini (for agent work)
     gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
     gcp_project: str = ""
     gcp_location: str = "us-central1"
+
+    # Agent settings
+    agent_response_enabled: bool = True  # Toggle agent responses (disable for testing)
 
     # Email (Mailgun)
     mailgun_api_key: str = ""
