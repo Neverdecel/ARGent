@@ -64,11 +64,28 @@ Characters reach out through different channels. Each has their own personality,
 
 ## Features
 
-- **Real channels** — Messages arrive via email and SMS, not a game interface
-- **Persistent memory** — Agents remember everything across conversations
-- **Adaptive narrative** — Story pacing adjusts to your engagement
-- **Trust mechanics** — Relationships evolve based on your choices
-- **Self-hostable** — Run your own instance, own your data
+### Communication
+- **Real channels** — Messages arrive via email (Mailgun) and SMS (Twilio), blurring the line between game and reality
+- **Web inbox fallback** — Browser-based messaging for development, demos, or players who prefer not to use real channels
+- **Webhook processing** — Inbound replies processed in real-time with signature verification
+
+### AI Agents
+- **Google ADK integration** — Agents powered by Gemini 2.5 Flash with structured persona system
+- **Dynamic prompts** — Context-aware system prompts built from personality, trust level, conversation history, and player knowledge
+- **Distinct personalities** — Each agent has unique voice, communication patterns, and behavioral rules
+- **First contact generation** — Agents initiate contact with contextually appropriate opening messages
+
+### Story Engine
+- **Trust tracking** — Per-agent trust scores (-100 to 100) with event logging
+- **Player knowledge** — Extracted facts tracked per player, agents don't repeat known information
+- **Story milestones** — Progress tracking for narrative beats
+- **Event scheduler** — Time-based and event-triggered message scheduling with configurable delays
+
+### Player Experience
+- **Dual play modes** — Immersive (real email/SMS) or web-only (browser inbox)
+- **Email + phone verification** — OTP-based verification ensures deliverability
+- **Conversation threading** — Full history with read/unread status
+- **Self-hostable** — Docker deployment, own your data, configure your own API keys
 
 ## Getting Started
 
@@ -117,25 +134,65 @@ docker compose exec app python /app/scripts/test_first_contact.py
 
 ## Project Status
 
-ARGent is in **active development**. Current state:
+ARGent is in **active development**. The core gameplay loop is functional.
 
-- [x] Onboarding flow with verification
-- [x] Web inbox for browser-based play
-- [x] Ember agent with dynamic prompts
-- [x] Avatar and conversation UI
-- [x] Docker deployment
-- [ ] Miro agent (SMS)
-- [ ] Multi-agent orchestration
-- [ ] Long-term memory persistence
+### Implemented
+
+**Onboarding & Authentication**
+- [x] Registration with email and phone
+- [x] OTP verification for both channels
+- [x] Session management with signed cookies
+- [x] Play mode selection (immersive vs web-only)
+
+**Communication Infrastructure**
+- [x] Web inbox with conversation UI and avatars
+- [x] Email service (Mailgun) with inbound webhooks
+- [x] SMS service (Twilio) with inbound webhooks
+- [x] Message dispatcher routing to correct channel
+
+**AI Agents**
+- [x] Ember agent (email) — anxious insider with full persona
+- [x] Miro agent (SMS) — information broker with full persona
+- [x] Dynamic prompt building from persona + context
+- [x] Conversation history awareness
+- [x] Trust-level-aware responses
+
+**Story Engine**
+- [x] Event scheduler with delayed triggers
+- [x] First contact scheduling (Ember → Miro cascade)
+- [x] Trust score tracking per agent
+- [x] Player knowledge/facts storage
+- [x] Story milestone tracking
+
+**Infrastructure**
+- [x] Docker Compose deployment (app, worker, postgres, redis)
+- [x] Huey task queue for background jobs
+- [x] Database migrations with Alembic
+
+### In Progress
+
+- [ ] **Trust extraction** — Automatically update trust from agent responses
+- [ ] **Condition-based triggers** — Fire events based on trust thresholds, player actions
+- [ ] **Agent orchestration** — Coordinate timing and awareness between agents
+- [ ] **Evidence dashboard** — In-fiction page players access with their key
+
+### Planned
+
+- [ ] **Additional agents** — Cipher, Kessler enter based on story progression
+- [ ] **Long-term memory** — Semantic search over conversation history
+- [ ] **Adaptive pacing** — Adjust message frequency based on engagement
+- [ ] **Inter-agent communication** — Agents share information when introduced
 
 ## Documentation
+
+See [docs/README.md](docs/README.md) for full navigation.
 
 | Topic | Link |
 |-------|------|
 | Project Vision | [docs/PROJECT_VISION.md](docs/PROJECT_VISION.md) |
+| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Development Roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Story Premise | [docs/story/PREMISE.md](docs/story/PREMISE.md) |
-| Agent Design | [docs/agents/AGENTS.md](docs/agents/AGENTS.md) |
-| Tech Decisions | [docs/TECHNOLOGY_CHOICES.md](docs/TECHNOLOGY_CHOICES.md) |
 
 ## Contributing
 
