@@ -14,7 +14,7 @@ redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
 huey = RedisHuey("argent", url=redis_url)
 
 
-@huey.task()
+@huey.task()  # type: ignore[untyped-decorator]
 def execute_story_event_task(
     event_id: str,
     player_id: str,

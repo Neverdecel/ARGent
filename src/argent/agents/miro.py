@@ -55,7 +55,7 @@ class MiroAgent(BaseAgent):
         os.environ["GOOGLE_API_KEY"] = gemini_api_key
 
         # Initialize session service for conversation state
-        self._session_service = InMemorySessionService()
+        self._session_service = InMemorySessionService()  # type: ignore[no-untyped-call]
 
         # Map player sessions to ADK session IDs
         self._player_sessions: dict[str, str] = {}

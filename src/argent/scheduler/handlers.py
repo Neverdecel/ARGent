@@ -45,10 +45,10 @@ async def send_ember_first_contact(
     if not key:
         # Try to fetch key from database
         async with async_session_maker() as db:
-            result = await db.execute(
+            key_result = await db.execute(
                 select(PlayerKey.key_value).where(PlayerKey.player_id == player_id)
             )
-            key = result.scalar_one_or_none() or ""
+            key = key_result.scalar_one_or_none() or ""
 
     if not key:
         logger.error("No key found for player %s, cannot send Ember first contact", player_id)
@@ -56,8 +56,8 @@ async def send_ember_first_contact(
 
     async with async_session_maker() as db:
         # Get player
-        result = await db.execute(select(Player).where(Player.id == player_id))
-        player = result.scalar_one_or_none()
+        player_result = await db.execute(select(Player).where(Player.id == player_id))
+        player = player_result.scalar_one_or_none()
         if not player:
             logger.error("Player not found: %s", player_id)
             return
@@ -303,7 +303,7 @@ async def _send_miro_via_sms(
 
     result = await sms_service.send_sms(
         to_number=to_phone,
-        message=content,
+        body=content,
     )
     return result.success
 
