@@ -25,7 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from argent.config import Settings, get_settings
-from argent.database import async_session_maker, get_db
+from argent.database import get_db
 from argent.models import Player
 from argent.models.player import Message, PlayerKnowledge, PlayerTrust
 from argent.services.base import OutboundMessage
