@@ -85,7 +85,44 @@ We're building in the open—the docs folder contains comprehensive specificatio
 
 ## Getting Started
 
-> Coming soon—implementation is in progress.
+### Prerequisites
+
+- Docker and Docker Compose
+- Google Gemini API key (for AI agents)
+
+### Quick Start
+
+1. **Clone and configure**
+   ```bash
+   git clone https://github.com/Neverdecel/argent.git
+   cd argent
+   cp .env.example .env.local
+   # Edit .env.local with your API keys
+   ```
+
+2. **Start the application**
+   ```bash
+   docker compose up -d
+   ```
+
+3. **Access the game**
+   - Open http://localhost:8000
+   - Register with email (use web-only mode for quick testing)
+   - Start the game and check your inbox
+
+### Development
+
+```bash
+# Run tests
+source .venv/bin/activate
+pytest
+
+# Test agent prompts (no API needed)
+python scripts/test_first_contact.py --prompt-only
+
+# Test full agent generation (requires API key)
+docker compose exec app python /app/scripts/test_first_contact.py
+```
 
 ## Contributing
 

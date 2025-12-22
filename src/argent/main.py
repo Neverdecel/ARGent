@@ -1,5 +1,7 @@
 """FastAPI application entry point."""
 
+import logging
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -13,6 +15,22 @@ from argent.api.webhooks import router as webhooks_router
 from argent.config import get_settings
 
 settings = get_settings()
+
+# Configure logging
+log_level = logging.DEBUG if settings.debug else logging.INFO
+logging.basicConfig(
+    level=log_level,
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%H:%M:%S",
+    stream=sys.stdout,
+)
+# Reduce noise from third-party libraries
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+logger = logging.getLogger(__name__)
+logger.info("Starting ARGent with debug=%s, log_level=%s", settings.debug, log_level)
 
 app = FastAPI(
     title=settings.app_name,
