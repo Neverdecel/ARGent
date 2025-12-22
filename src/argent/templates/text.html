@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Messages - ARGent{% endblock %}
+
+{% block content %}
+<div class="text-page">
+    <div class="text-header">
+        <a href="/hub" class="back-btn">&larr;</a>
+        <h1>Messages</h1>
+    </div>
+
+    <div class="conversation-list">
+        {% if conversations %}
+            {% for conv in conversations %}
+            <a href="/text/thread/{{ conv.session_id }}" class="text-item {% if conv.unread_count > 0 %}unread{% endif %}">
+                <div class="text-icon">[sms]</div>
+                <div class="text-info">
+                    <div class="text-header-row">
+                        <span class="text-name">{{ conv.title }}</span>
+                        <span class="text-time">{{ conv.updated_at.strftime('%b %d') }}</span>
+                    </div>
+                    <div class="text-preview">{{ conv.latest_preview | replace('\n', ' ') }}{% if conv.latest_preview|length > 60 %}...{% endif %}</div>
+                </div>
+                {% if conv.unread_count > 0 %}
+                <span class="text-badge">{{ conv.unread_count }}</span>
+                {% endif %}
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-inbox">
+                <p>No messages yet.</p>
+                <p class="empty-hint">Someone might reach out soon...</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.text-page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding-top: 1rem;
+}
+
+.text-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.text-header h1 {
+    margin-bottom: 0;
+}
+
+.conversation-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.text-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.text-item:hover {
+    background-color: var(--bg-secondary);
+    margin: 0 -1rem;
+    padding: 1rem;
+    text-decoration: none;
+}
+
+.text-item.unread {
+    background-color: rgba(0, 255, 136, 0.03);
+    margin: 0 -1rem;
+    padding: 1rem;
+    border-left: 3px solid var(--accent);
+}
+
+.text-icon {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    min-width: 40px;
+}
+
+.text-item.unread .text-icon {
+    color: var(--accent);
+}
+
+.text-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.text-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.text-name {
+    font-weight: 600;
+}
+
+.text-item.unread .text-name {
+    color: var(--accent);
+}
+
+.text-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.text-preview {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.text-badge {
+    background: var(--accent);
+    color: var(--bg-primary);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+}
+</style>
+{% endblock %}
