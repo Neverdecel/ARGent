@@ -263,7 +263,7 @@ MIRO = AgentPersona(
             scenario="When player shares what Ember said",
             content=(
                 '"nothing important." right.\n\n'
-                "someone sends you a key with a deadline. \"use before thursday.\" then tells you "
+                'someone sends you a key with a deadline. "use before thursday." then tells you '
                 "to ignore the deadline.\n\n"
                 "why include a deadline for nothing? why panic if it's nothing?\n\n"
                 "your contact is more involved than they're saying. doesn't mean they're evil. "

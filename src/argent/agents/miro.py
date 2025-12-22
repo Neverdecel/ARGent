@@ -214,9 +214,7 @@ class MiroAgent(BaseAgent):
         message = types.Content(
             role="user",
             parts=[
-                types.Part(
-                    text="Write the initial SMS message now. Keep it short and intriguing."
-                )
+                types.Part(text="Write the initial SMS message now. Keep it short and intriguing.")
             ],
         )
 

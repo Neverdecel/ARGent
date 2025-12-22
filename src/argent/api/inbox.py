@@ -384,15 +384,17 @@ async def text_page(
     for conv in conversations:
         latest_msg = conv.get("latest_message")
         agent_id = latest_msg.agent_id if latest_msg else None
-        conversations_with_avatars.append({
-            "session_id": conv["session_id"],
-            "title": conv["title"],
-            "message_count": conv["message_count"],
-            "unread_count": conv["unread_count"],
-            "updated_at": conv["updated_at"],
-            "latest_preview": (latest_msg.content or "")[:80] if latest_msg else "",
-            "avatar_url": _get_agent_avatar_url(agent_id),
-        })
+        conversations_with_avatars.append(
+            {
+                "session_id": conv["session_id"],
+                "title": conv["title"],
+                "message_count": conv["message_count"],
+                "unread_count": conv["unread_count"],
+                "updated_at": conv["updated_at"],
+                "latest_preview": (latest_msg.content or "")[:80] if latest_msg else "",
+                "avatar_url": _get_agent_avatar_url(agent_id),
+            }
+        )
 
     return templates.TemplateResponse(
         "text.html",

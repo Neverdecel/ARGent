@@ -326,9 +326,7 @@ class WebInboxService(BaseChannelService):
 
         return count
 
-    async def get_unread_count(
-        self, player_id: UUID, channel_filter: str | None = None
-    ) -> int:
+    async def get_unread_count(self, player_id: UUID, channel_filter: str | None = None) -> int:
         """Get count of unread messages for a player.
 
         Args:
