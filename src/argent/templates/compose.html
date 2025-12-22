@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Compose - ARGent{% endblock %}
+
+{% block content %}
+<div class="compose-page">
+    <div class="compose-card">
+        <div class="compose-header">
+            <a href="/inbox" class="back-btn">&larr;</a>
+            <span class="compose-title">New Message</span>
+        </div>
+        <form id="compose-form" class="compose-form">
+            <!-- To field (dropdown of available contacts/agents) -->
+            <div class="compose-field">
+                <label class="compose-label">To:</label>
+                <select id="compose-to" name="agent_id" class="compose-select" required>
+                    <option value="">Select recipient...</option>
+                    {% for contact in contacts %}
+                    <option value="{{ contact.id }}">{{ contact.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- From field (read-only) -->
+            <div class="compose-field">
+                <label class="compose-label">From:</label>
+                <span class="compose-value">You</span>
+            </div>
+
+            <!-- Subject field -->
+            <div class="compose-field">
+                <label class="compose-label">Subject:</label>
+                <input type="text" id="compose-subject" name="subject"
+                       placeholder="Subject" class="compose-input">
+            </div>
+
+            <!-- Separator -->
+            <div class="compose-separator"></div>
+
+            <!-- Message body -->
+            <div class="compose-body">
+                <textarea id="compose-content" name="content"
+                          placeholder="Write your message..." rows="12" required></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="compose-actions">
+                <button type="submit" class="btn btn-primary">Send</button>
+                <button type="button" class="btn btn-secondary" onclick="discardCompose()">Discard</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Discard compose handler
+function discardCompose() {
+    if (confirm('Discard this message?')) {
+        window.location.href = '/inbox';
+    }
+}
+
+// Form submission handler
+document.getElementById('compose-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const agentId = document.getElementById('compose-to').value;
+    const subject = document.getElementById('compose-subject').value.trim();
+    const content = document.getElementById('compose-content').value;
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    if (!agentId) {
+        alert('Please select a recipient');
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+
+    const requestBody = {
+        content: content,
+        agent_id: agentId
+    };
+
+    if (subject) {
+        requestBody.subject = subject;
+    }
+
+    try {
+        const response = await fetch('/api/inbox/compose', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            // Redirect to the new thread
+            if (data.session_id) {
+                // Get the message ID from the response to show the thread
+                window.location.href = '/inbox/thread/' + data.id;
+            } else {
+                window.location.href = '/inbox';
+            }
+        } else {
+            const error = await response.json();
+            alert('Failed to send: ' + (error.detail || 'Unknown error'));
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Send';
+        }
+    } catch (err) {
+        alert('Failed to send message. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send';
+    }
+});
+</script>
+{% endblock %}

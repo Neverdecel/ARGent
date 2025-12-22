@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}{{ thread_subject or title }} - ARGent{% endblock %}
+
+{% block content %}
+<div class="thread-page">
+    <div class="thread-header">
+        <a href="/inbox" class="back-btn">&larr;</a>
+        <div class="thread-title-section">
+            <h1>{{ thread_subject or title }}</h1>
+            <span class="thread-count">{{ messages|length }} message{% if messages|length != 1 %}s{% endif %}</span>
+        </div>
+    </div>
+
+    <div class="thread-messages">
+        {% for msg in messages %}
+        <div class="thread-email {% if msg.id == focused_message_id %}expanded{% else %}collapsed{% endif %}"
+             data-message-id="{{ msg.id }}">
+
+            <!-- Collapsed view (clickable header) -->
+            <div class="email-collapsed-header" onclick="toggleEmail(this)">
+                {% if msg.avatar_url %}
+                <img src="{{ msg.avatar_url }}" alt="" class="email-avatar">
+                {% else %}
+                <div class="email-avatar-placeholder">{{ (msg.sender_name or 'U')[0] }}</div>
+                {% endif %}
+                <div class="email-summary">
+                    <span class="email-sender">{{ msg.sender_name or 'Unknown' }}</span>
+                    <span class="email-preview">{{ (msg.content or '')[:60] }}{% if (msg.content or '')|length > 60 %}...{% endif %}</span>
+                </div>
+                <span class="email-date">{{ msg.created_at.strftime('%b %d, %I:%M %p') }}</span>
+                <span class="email-expand-icon">▼</span>
+            </div>
+
+            <!-- Expanded view (full email) -->
+            <div class="email-expanded">
+                <div class="email-header">
+                    <div class="email-meta-row">
+                        <span class="email-meta-label">From:</span>
+                        <span class="email-meta-value">
+                            {% if msg.avatar_url %}
+                            <img src="{{ msg.avatar_url }}" alt="" class="email-header-avatar">
+                            {% endif %}
+                            {{ msg.sender_name or 'Unknown' }}
+                        </span>
+                    </div>
+                    <div class="email-meta-row">
+                        <span class="email-meta-label">To:</span>
+                        <span class="email-meta-value">{% if msg.direction == 'outbound' %}You{% else %}{{ title }}{% endif %}</span>
+                    </div>
+                    <div class="email-meta-row">
+                        <span class="email-meta-label">Date:</span>
+                        <span class="email-meta-value">{{ msg.created_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+                    </div>
+                    {% if msg.subject %}
+                    <div class="email-meta-row">
+                        <span class="email-meta-label">Subject:</span>
+                        <span class="email-meta-value email-subject-text">{{ msg.subject }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="email-body">
+                    {% if msg.html_content %}
+                    {{ msg.html_content | safe }}
+                    {% else %}
+                    {{ (msg.content or '') | replace('\n', '<br>') | safe }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Reply form - Email style -->
+    <div class="reply-section">
+        <div class="compose-card">
+            <div class="compose-header">
+                <span class="compose-title">Reply</span>
+            </div>
+            <form id="reply-form" class="compose-form">
+                <input type="hidden" name="session_id" value="{{ session_id }}">
+
+                <!-- To field (read-only) -->
+                <div class="compose-field">
+                    <label class="compose-label">To:</label>
+                    <span class="compose-value">{{ title }}</span>
+                </div>
+
+                <!-- From field (read-only) -->
+                <div class="compose-field">
+                    <label class="compose-label">From:</label>
+                    <span class="compose-value">You</span>
+                </div>
+
+                <!-- Subject field (pre-filled with Re:) -->
+                <div class="compose-field">
+                    <label class="compose-label">Subject:</label>
+                    <input type="text" id="reply-subject" name="subject"
+                           value="{% if thread_subject %}Re: {{ thread_subject }}{% endif %}" class="compose-input"
+                           placeholder="Subject (optional)">
+                </div>
+
+                <!-- Separator -->
+                <div class="compose-separator"></div>
+
+                <!-- Message body -->
+                <div class="compose-body">
+                    <textarea id="reply-content" name="content"
+                              placeholder="Write your reply..." rows="6" required></textarea>
+
+                    <!-- Quoted message (collapsed by default) -->
+                    {% if messages|length > 0 %}
+                    <div class="quoted-message-container">
+                        <button type="button" class="quote-toggle" onclick="toggleQuote()">
+                            <span class="quote-icon">▶</span> Show quoted text
+                        </button>
+                        <div class="quoted-message" style="display: none;">
+                            {% set last_msg = messages[-1] %}
+                            <div class="quote-header">
+                                On {{ last_msg.created_at.strftime('%b %d, %Y at %I:%M %p') }}, {{ last_msg.sender_name }} wrote:
+                            </div>
+                            <div class="quote-content">{{ last_msg.content }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Actions -->
+                <div class="compose-actions">
+                    <button type="submit" class="btn btn-primary">Send</button>
+                    <button type="button" class="btn btn-secondary" onclick="discardReply()">Discard</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleEmail(header) {
+    const email = header.closest('.thread-email');
+    const wasExpanded = email.classList.contains('expanded');
+
+    email.classList.toggle('expanded');
+    email.classList.toggle('collapsed');
+
+    // Update expand icon
+    const icon = header.querySelector('.email-expand-icon');
+    if (icon) {
+        icon.textContent = wasExpanded ? '▼' : '▲';
+    }
+}
+
+console.log('Thread page script loaded');
+
+// Quote toggle handler
+function toggleQuote() {
+    const container = document.querySelector('.quoted-message-container');
+    if (!container) return;
+
+    const quote = container.querySelector('.quoted-message');
+    const icon = container.querySelector('.quote-icon');
+    const toggle = container.querySelector('.quote-toggle');
+    if (!quote) return;
+
+    if (quote.style.display === 'none') {
+        quote.style.display = 'block';
+        if (icon) icon.classList.add('expanded');
+        if (toggle) toggle.innerHTML = '<span class="quote-icon expanded">▶</span> Hide quoted text';
+    } else {
+        quote.style.display = 'none';
+        if (icon) icon.classList.remove('expanded');
+        if (toggle) toggle.innerHTML = '<span class="quote-icon">▶</span> Show quoted text';
+    }
+}
+
+// Discard reply handler
+function discardReply() {
+    if (confirm('Discard this reply?')) {
+        document.getElementById('reply-content').value = '';
+        document.getElementById('reply-subject').value = '{% if thread_subject %}Re: {{ thread_subject }}{% endif %}';
+    }
+}
+
+// Form submission handler
+document.getElementById('reply-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const content = document.getElementById('reply-content').value;
+    const subject = document.getElementById('reply-subject').value.trim();
+    const sessionId = form.querySelector('input[name="session_id"]').value;
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+
+    const requestBody = {
+        content: content,
+        session_id: sessionId
+    };
+
+    if (subject) {
+        requestBody.subject = subject;
+    }
+
+    try {
+        const response = await fetch('/api/inbox/compose', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (response.ok) {
+            // Reload immediately to show user's message
+            // Agent response will appear when ready (auto-refresh below)
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert('Failed to send: ' + (error.detail || 'Unknown error'));
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Send';
+        }
+    } catch (err) {
+        alert('Failed to send message. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send';
+    }
+});
+
+// Auto-refresh to check for new messages (agent responses)
+// Check every 3 seconds, stop after 30 seconds
+let refreshCount = 0;
+const maxRefreshes = 10;
+const initialMessageCount = document.querySelectorAll('.thread-email').length;
+
+function checkForNewMessages() {
+    if (refreshCount >= maxRefreshes) return;
+
+    refreshCount++;
+    // Add cache-busting timestamp
+    const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_t=' + Date.now();
+    fetch(url, {
+        headers: { 'Accept': 'text/html' },
+        cache: 'no-store'
+    })
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newMessageCount = doc.querySelectorAll('.thread-email').length;
+
+            console.log('Polling: initial=' + initialMessageCount + ', current=' + newMessageCount);
+
+            if (newMessageCount > initialMessageCount) {
+                // New message arrived, reload to show it
+                console.log('New message detected, reloading...');
+                window.location.reload();
+            } else if (refreshCount < maxRefreshes) {
+                // Keep checking
+                setTimeout(checkForNewMessages, 3000);
+            }
+        })
+        .catch((err) => {
+            console.error('Polling error:', err);
+            // On error, keep trying
+            if (refreshCount < maxRefreshes) {
+                setTimeout(checkForNewMessages, 3000);
+            }
+        });
+}
+
+// Start checking for new messages after page load
+console.log('Starting message polling, initial count:', initialMessageCount);
+setTimeout(checkForNewMessages, 3000);
+
+// Initialize expand icons based on state
+document.querySelectorAll('.thread-email').forEach(email => {
+    const icon = email.querySelector('.email-expand-icon');
+    if (icon) {
+        icon.textContent = email.classList.contains('expanded') ? '▲' : '▼';
+    }
+});
+</script>
+{% endblock %}
