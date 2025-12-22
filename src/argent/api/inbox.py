@@ -489,6 +489,7 @@ async def thread_page(
     title = ", ".join(sorted(participants)) if participants else "Conversation"
 
     # Add avatar URLs and mark which message is focused
+    # Reverse order: newest messages first
     messages_with_avatars = [
         {
             "id": msg.id,
@@ -503,7 +504,7 @@ async def thread_page(
             "session_id": msg.session_id,
             "avatar_url": _get_agent_avatar_url(msg.agent_id),
         }
-        for msg in messages
+        for msg in reversed(messages)
     ]
 
     return templates.TemplateResponse(

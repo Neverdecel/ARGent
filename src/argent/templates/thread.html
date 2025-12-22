@@ -115,7 +115,7 @@
                             <span class="quote-icon">▶</span> Show quoted text
                         </button>
                         <div class="quoted-message" style="display: none;">
-                            {% set last_msg = messages[-1] %}
+                            {% set last_msg = messages[0] %}
                             <div class="quote-header">
                                 On {{ last_msg.created_at.strftime('%b %d, %Y at %I:%M %p') }}, {{ last_msg.sender_name }} wrote:
                             </div>
