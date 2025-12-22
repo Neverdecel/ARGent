@@ -4,16 +4,24 @@
 
 {% block content %}
 <div class="inbox-page">
-    <h1>Inbox</h1>
+    <div class="inbox-header">
+        <h1>Inbox</h1>
+        <a href="/inbox/compose" class="btn btn-primary compose-btn">Compose</a>
+    </div>
 
     <div class="message-list">
-        {% if conversations %}
-            {% for conv in conversations %}
-            <a href="/inbox/conversation/{{ conv.session_id }}" class="message-item {% if conv.unread_count > 0 %}unread{% endif %}">
-                <div class="message-from">{{ conv.title }}</div>
-                <div class="message-subject">{{ conv.latest_message.subject or '' }}</div>
-                <div class="message-preview">{{ (conv.latest_message.content or '')[:120] | replace('\n', ' ') }}{% if (conv.latest_message.content or '')|length > 120 %}...{% endif %}</div>
-                <div class="message-date">{{ conv.updated_at.strftime('%b %d, %H:%M') }}</div>
+        {% if messages %}
+            {% for msg in messages %}
+            <a href="/inbox/thread/{{ msg.id }}" class="message-item {% if not msg.read_at %}unread{% endif %}">
+                <div class="message-sender-col">
+                    {% if msg.avatar_url %}
+                    <img src="{{ msg.avatar_url }}" alt="" class="sender-avatar">
+                    {% endif %}
+                    <span class="message-from">{{ msg.sender_name or 'Unknown' }}</span>
+                </div>
+                <div class="message-subject">{{ msg.subject or '(no subject)' }}</div>
+                <div class="message-preview">{{ (msg.content or '')[:100] | replace('\n', ' ') }}{% if (msg.content or '')|length > 100 %}...{% endif %}</div>
+                <div class="message-date">{{ msg.created_at.strftime('%b %d') }}</div>
             </a>
             {% endfor %}
         {% else %}
