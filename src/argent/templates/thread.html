@@ -68,11 +68,10 @@
                 </div>
             </div>
         </div>
-        {% endfor %}
-    </div>
 
-    <!-- Reply form - Email style -->
-    <div class="reply-section">
+        {% if loop.first %}
+        <!-- Reply form - appears after newest message -->
+        <div class="reply-section">
         <div class="compose-card">
             <div class="compose-header">
                 <span class="compose-title">Reply</span>
@@ -132,6 +131,9 @@
                 </div>
             </form>
         </div>
+    </div>
+        {% endif %}
+        {% endfor %}
     </div>
 </div>
 {% endblock %}
