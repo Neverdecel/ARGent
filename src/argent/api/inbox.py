@@ -14,6 +14,9 @@ from uuid import UUID
 if TYPE_CHECKING:
     from argent.agents.base import BaseAgent
 
+import asyncio
+import threading
+
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -35,7 +38,7 @@ router = APIRouter(tags=["inbox"])
 
 # Templates directory
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR), auto_reload=True)
 
 
 # --- Pydantic Models ---
@@ -90,6 +93,7 @@ class ComposeRequest(BaseModel):
     content: str
     subject: str | None = None
     session_id: str | None = None  # For replies
+    agent_id: str | None = None  # For new messages (recipient)
 
 
 class MarkReadRequest(BaseModel):
@@ -269,7 +273,7 @@ async def inbox_page(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> Response:
-    """Main inbox page - shows conversation list."""
+    """Main inbox page - shows individual emails."""
     # Check if web inbox is enabled
     if not settings.web_inbox_enabled:
         raise HTTPException(status_code=404, detail="Web inbox not enabled")
@@ -284,16 +288,33 @@ async def inbox_page(
         # Redirect immersive mode players away
         return RedirectResponse(url="/start", status_code=status.HTTP_303_SEE_OTHER)
 
-    # Get conversations
+    # Get individual messages (flat list, not grouped)
     inbox_service = _get_web_inbox_service(db)
-    conversations = await inbox_service.get_conversations(player.id, channel_filter=channel)
+    messages = await inbox_service.get_messages(player.id, limit=50)
     unread_count = await inbox_service.get_unread_count(player.id)
+
+    # Add avatar URLs to messages
+    messages_with_avatars = [
+        {
+            "id": msg.id,
+            "channel": msg.channel,
+            "direction": msg.direction,
+            "sender_name": msg.sender_name,
+            "subject": msg.subject,
+            "content": msg.content,
+            "created_at": msg.created_at,
+            "read_at": msg.read_at,
+            "session_id": msg.session_id,
+            "avatar_url": _get_agent_avatar_url(msg.agent_id),
+        }
+        for msg in messages
+    ]
 
     return templates.TemplateResponse(
         "inbox.html",
         {
             "request": request,
-            "conversations": conversations,
+            "messages": messages_with_avatars,
             "unread_count": unread_count,
             "player": player,
             "channel_filter": channel,
@@ -375,6 +396,126 @@ async def conversation_page(
             "session_id": session_id,
             "title": title,
             "messages": messages_with_avatars,
+            "player": player,
+        },
+    )
+
+
+def _get_available_contacts() -> list[dict]:
+    """Get list of agents the player can contact."""
+    # For now, just Ember
+    return [
+        {"id": "ember", "name": "Ember Vance"},
+    ]
+
+
+@router.get("/inbox/compose", response_class=HTMLResponse)
+async def compose_page(
+    request: Request,
+    argent_session: Annotated[str | None, Cookie()] = None,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    """Compose new email page."""
+    if not settings.web_inbox_enabled:
+        raise HTTPException(status_code=404, detail="Web inbox not enabled")
+
+    player = await _get_current_player(argent_session, db, settings)
+    if not player:
+        return RedirectResponse(url="/register", status_code=status.HTTP_303_SEE_OTHER)
+
+    if player.communication_mode != "web_only":
+        return RedirectResponse(url="/start", status_code=status.HTTP_303_SEE_OTHER)
+
+    # Get available contacts (agents player can email)
+    contacts = _get_available_contacts()
+
+    return templates.TemplateResponse(
+        "compose.html",
+        {
+            "request": request,
+            "player": player,
+            "contacts": contacts,
+        },
+    )
+
+
+@router.get("/inbox/thread/{message_id}", response_class=HTMLResponse)
+async def thread_page(
+    request: Request,
+    message_id: UUID,
+    argent_session: Annotated[str | None, Cookie()] = None,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    """Gmail-style thread view - shows all messages in thread with clicked one expanded."""
+    if not settings.web_inbox_enabled:
+        raise HTTPException(status_code=404, detail="Web inbox not enabled")
+
+    player = await _get_current_player(argent_session, db, settings)
+    if not player:
+        return RedirectResponse(url="/register", status_code=status.HTTP_303_SEE_OTHER)
+
+    if player.communication_mode != "web_only":
+        return RedirectResponse(url="/start", status_code=status.HTTP_303_SEE_OTHER)
+
+    inbox_service = _get_web_inbox_service(db)
+
+    # Get the clicked message
+    message = await inbox_service.get_message(player.id, message_id)
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    # Get all messages in the same thread (session_id)
+    if message.session_id:
+        messages = await inbox_service.get_conversation_messages(player.id, message.session_id)
+    else:
+        # Single message, no thread
+        messages = [message]
+
+    # Mark the clicked message as read
+    await inbox_service.mark_read(player.id, message_id)
+    await db.commit()
+
+    # Determine thread subject from first message with subject
+    thread_subject = None
+    for msg in messages:
+        if msg.subject:
+            thread_subject = msg.subject
+            break
+
+    # Determine conversation title from participants
+    participants = {m.sender_name for m in messages if m.sender_name and m.sender_name != "You"}
+    title = ", ".join(sorted(participants)) if participants else "Conversation"
+
+    # Add avatar URLs and mark which message is focused
+    # Reverse order: newest messages first
+    messages_with_avatars = [
+        {
+            "id": msg.id,
+            "channel": msg.channel,
+            "direction": msg.direction,
+            "sender_name": msg.sender_name,
+            "subject": msg.subject,
+            "content": msg.content,
+            "html_content": msg.html_content,
+            "created_at": msg.created_at,
+            "read_at": msg.read_at,
+            "session_id": msg.session_id,
+            "avatar_url": _get_agent_avatar_url(msg.agent_id),
+        }
+        for msg in reversed(messages)
+    ]
+
+    return templates.TemplateResponse(
+        "thread.html",
+        {
+            "request": request,
+            "session_id": message.session_id or f"single-{message_id}",
+            "title": title,
+            "thread_subject": thread_subject,
+            "messages": messages_with_avatars,
+            "focused_message_id": message_id,
             "player": player,
         },
     )
@@ -506,6 +647,126 @@ async def mark_message_read(
     return {"success": success}
 
 
+def _run_agent_response_in_thread(
+    player_id: UUID,
+    session_id: str,
+    agent_id: str,
+    player_message: str,
+    settings: Settings,
+) -> None:
+    """Run agent response generation in a separate thread with its own event loop."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(
+            _generate_agent_response_background(
+                player_id, session_id, agent_id, player_message, settings
+            )
+        )
+    finally:
+        loop.close()
+
+
+async def _generate_agent_response_background(
+    player_id: UUID,
+    session_id: str,
+    agent_id: str,
+    player_message: str,
+    settings: Settings,
+) -> None:
+    """Background task to generate agent response.
+
+    Creates its own database engine and session since we're running in
+    a separate thread with its own event loop.
+    """
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+    # Create a fresh engine for this event loop
+    bg_engine = create_async_engine(
+        settings.database_url,
+        echo=settings.debug,
+        pool_pre_ping=True,
+    )
+    bg_session_maker = async_sessionmaker(
+        bg_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+    try:
+        async with bg_session_maker() as db:
+            agent = _get_agent(agent_id, settings)
+            if not agent:
+                logger.warning(
+                    "No agent available for %s (API key may be missing)",
+                    agent_id,
+                )
+                return
+
+            from argent.agents.base import AgentContext
+
+            # Build agent context
+            trust_score = await _get_player_trust_score(db, player_id, agent_id)
+            knowledge = await _get_player_knowledge(db, player_id)
+            history = await _get_conversation_history(db, player_id, session_id)
+
+            context = AgentContext(
+                player_id=player_id,
+                session_id=session_id,
+                player_message=player_message,
+                conversation_history=history,
+                player_trust_score=trust_score,
+                player_knowledge=knowledge,
+            )
+
+            # Generate response
+            response = await agent.generate_response(context)
+
+            # Store agent response
+            inbox_service = _get_web_inbox_service(db)
+            await inbox_service.send_message(
+                OutboundMessage(
+                    player_id=player_id,
+                    recipient="",  # Not used for web inbox
+                    content=response.content,
+                    agent_id=agent_id,
+                    subject=response.subject,
+                ),
+                display_channel="email" if agent_id == "ember" else "sms",
+            )
+
+            # Update session_id on the agent's response message
+            result = await db.execute(
+                select(Message)
+                .where(Message.player_id == player_id)
+                .where(Message.agent_id == agent_id)
+                .order_by(Message.created_at.desc())
+                .limit(1)
+            )
+            agent_message = result.scalar_one_or_none()
+            if agent_message:
+                agent_message.session_id = session_id
+
+            await db.commit()
+
+            logger.info(
+                "Agent %s responded to player %s in session %s",
+                agent_id,
+                player_id,
+                session_id,
+            )
+
+    except Exception as e:
+        logger.error(
+            "Failed to generate agent response: %s",
+            str(e),
+            exc_info=True,
+        )
+    finally:
+        # Clean up the background engine
+        await bg_engine.dispose()
+
+
 @router.post("/api/inbox/compose")
 async def compose_message(
     request_body: ComposeRequest,
@@ -513,7 +774,9 @@ async def compose_message(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> MessageDetail:
-    """Compose and send a new message, get immediate agent response."""
+    """Compose and send a new message. Agent response is generated in background."""
+    from uuid import uuid4
+
     if not settings.web_inbox_enabled:
         raise HTTPException(status_code=404, detail="Web inbox not enabled")
 
@@ -523,96 +786,54 @@ async def compose_message(
 
     inbox_service = _get_web_inbox_service(db)
 
+    # If no session_id but agent_id provided, this is a NEW conversation
+    session_id = request_body.session_id
+    agent_id = request_body.agent_id
+
+    if not session_id and agent_id:
+        # Create new session_id for new conversation
+        session_id = f"{agent_id}-{uuid4()}"
+        logger.info(
+            "Creating new conversation session %s with agent %s",
+            session_id,
+            agent_id,
+        )
+
     # Store the player's message
     message = await inbox_service.store_player_message(
         player_id=player.id,
         content=request_body.content,
         subject=request_body.subject,
-        session_id=request_body.session_id,
+        session_id=session_id,
     )
 
-    # Generate agent response if enabled and session exists
-    if settings.agent_response_enabled and request_body.session_id:
-        # Determine which agent this conversation is with
-        agent_id = await _get_session_agent_id(db, player.id, request_body.session_id)
+    # Commit player message immediately so it's visible
+    await db.commit()
+
+    # Schedule agent response generation in background using asyncio.create_task
+    # This runs truly in the background without blocking the response
+    if settings.agent_response_enabled and session_id:
+        # For replies, look up the agent from existing messages
+        if not agent_id:
+            agent_id = await _get_session_agent_id(db, player.id, session_id)
 
         if agent_id:
-            agent = _get_agent(agent_id, settings)
-
-            if agent:
-                try:
-                    # Build agent context
-                    from argent.agents.base import AgentContext
-
-                    trust_score = await _get_player_trust_score(db, player.id, agent_id)
-                    knowledge = await _get_player_knowledge(db, player.id)
-                    history = await _get_conversation_history(
-                        db, player.id, request_body.session_id
-                    )
-
-                    context = AgentContext(
-                        player_id=player.id,
-                        session_id=request_body.session_id,
-                        player_message=request_body.content,
-                        conversation_history=history,
-                        player_trust_score=trust_score,
-                        player_knowledge=knowledge,
-                    )
-
-                    # Generate response
-                    response = await agent.generate_response(context)
-
-                    # Store agent response
-                    await inbox_service.send_message(
-                        OutboundMessage(
-                            player_id=player.id,
-                            recipient="",  # Not used for web inbox
-                            content=response.content,
-                            agent_id=agent_id,
-                            subject=response.subject,
-                        ),
-                        display_channel="email" if agent_id == "ember" else "sms",
-                    )
-
-                    # Update session_id on the agent's response message
-                    # (The send_message doesn't set session_id, so we need to update it)
-                    result = await db.execute(
-                        select(Message)
-                        .where(Message.player_id == player.id)
-                        .where(Message.agent_id == agent_id)
-                        .order_by(Message.created_at.desc())
-                        .limit(1)
-                    )
-                    agent_message = result.scalar_one_or_none()
-                    if agent_message:
-                        agent_message.session_id = request_body.session_id
-
-                    logger.info(
-                        "Agent %s responded to player %s in session %s",
-                        agent_id,
-                        player.id,
-                        request_body.session_id,
-                    )
-
-                except Exception as e:
-                    logger.error(
-                        "Failed to generate agent response: %s",
-                        str(e),
-                        exc_info=True,
-                    )
-                    # Don't fail the request - player message is still saved
-            else:
-                logger.warning(
-                    "No agent available for %s (API key may be missing)",
-                    agent_id,
-                )
+            # Run in separate thread to truly decouple from request
+            thread = threading.Thread(
+                target=_run_agent_response_in_thread,
+                args=(player.id, session_id, agent_id, request_body.content, settings),
+                daemon=True,
+            )
+            thread.start()
+            logger.info(
+                "Started background thread for agent response in session %s",
+                session_id,
+            )
         else:
             logger.debug(
-                "No agent found for session %s - may be a new conversation",
-                request_body.session_id,
+                "No agent found for session %s - skipping response",
+                session_id,
             )
-
-    await db.commit()
 
     return MessageDetail(
         id=message.id,

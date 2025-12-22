@@ -165,10 +165,25 @@ class EmberAgent(BaseAgent):
         # Clean up the response
         response_text = response_text.strip()
 
+        # Extract subject line if present (format: "Subject: ..." on first line)
+        subject = None
+        content = response_text
+
+        lines = response_text.split("\n", 1)
+        if lines and lines[0].lower().startswith("subject:"):
+            subject = lines[0][8:].strip()
+            content = lines[1].strip() if len(lines) > 1 else ""
+
+        logger.debug(
+            "Response generated: subject=%r, content_length=%d",
+            subject,
+            len(content),
+        )
+
         # For now, don't calculate trust delta (will be added later)
         return AgentResponse(
-            content=response_text,
-            subject=None,  # Could extract subject from response if needed
+            content=content,
+            subject=subject,
             trust_delta=0,
             new_knowledge=[],
         )

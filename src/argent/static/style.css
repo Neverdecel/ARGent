@@ -756,6 +756,92 @@ a:hover {
     text-align: right;
 }
 
+/* Email Header Styles */
+.email-header {
+    padding: 12px 16px;
+    background-color: var(--bg-tertiary);
+    border-radius: 8px 8px 0 0;
+    margin: -1rem -1.2rem 0 -1.2rem;
+    font-size: 0.9rem;
+}
+
+.email-meta-row {
+    display: flex;
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+.email-meta-row:last-child {
+    margin-bottom: 0;
+}
+
+.email-meta-label {
+    font-weight: bold;
+    color: var(--text-secondary);
+    min-width: 65px;
+    flex-shrink: 0;
+}
+
+.email-meta-value {
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.email-subject-text {
+    font-weight: bold;
+}
+
+.email-header-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border);
+}
+
+.email-separator {
+    height: 1px;
+    background: linear-gradient(to right, var(--border), transparent);
+    margin: 1rem 0;
+}
+
+/* Subject Input Styles */
+.subject-toggle-row {
+    margin-bottom: 8px;
+}
+
+.toggle-subject-link {
+    font-size: 0.85rem;
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.toggle-subject-link:hover {
+    text-decoration: underline;
+}
+
+.subject-field-group {
+    margin-bottom: 12px;
+}
+
+.subject-field-group input {
+    width: 100%;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+}
+
+.subject-field-group input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
 .reply-section {
     padding-top: 1rem;
     border-top: 1px solid var(--border);
@@ -800,6 +886,362 @@ a:hover {
 .form-group textarea:focus {
     outline: none;
     border-color: var(--accent);
+}
+
+/* Thread Page - Gmail-style email view */
+.thread-page {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.thread-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.thread-title-section {
+    flex: 1;
+}
+
+.thread-title-section h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.thread-count {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Thread Email Items */
+.thread-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 2rem;
+}
+
+.thread-email {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-secondary);
+}
+
+.thread-email.collapsed .email-expanded {
+    display: none;
+}
+
+.thread-email.expanded .email-collapsed-header {
+    border-bottom: 1px solid var(--border);
+}
+
+/* Collapsed Header */
+.email-collapsed-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    gap: 12px;
+}
+
+.email-collapsed-header:hover {
+    background: var(--bg-tertiary);
+}
+
+.email-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.email-avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.email-summary {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.email-sender {
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.email-preview {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.thread-email.expanded .email-preview {
+    display: none;
+}
+
+.email-date {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.email-expand-icon {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    width: 16px;
+    text-align: center;
+}
+
+/* Expanded Email */
+.email-expanded {
+    padding: 16px 20px;
+    background: var(--bg-primary);
+}
+
+.email-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.reply-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    margin-left: auto;
+}
+
+.close-btn:hover {
+    color: var(--text-primary);
+}
+
+.email-body {
+    margin-top: 1rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    padding: 1rem 0;
+}
+
+/* Inbox list sender column */
+.message-sender-col {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+}
+
+.sender-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Compose Card */
+.compose-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.compose-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-tertiary);
+}
+
+.compose-title {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Compose Form */
+.compose-form {
+    padding: 0;
+}
+
+.compose-field {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.compose-label {
+    width: 70px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.compose-value {
+    color: var(--text-primary);
+}
+
+.compose-input,
+.compose-select {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 4px 0;
+}
+
+.compose-input:focus,
+.compose-select:focus {
+    outline: none;
+}
+
+.compose-select {
+    cursor: pointer;
+}
+
+.compose-select option {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.compose-separator {
+    border-bottom: 1px solid var(--border);
+}
+
+.compose-body {
+    padding: 16px;
+}
+
+.compose-body textarea {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 120px;
+}
+
+.compose-body textarea:focus {
+    outline: none;
+}
+
+.compose-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-tertiary);
+}
+
+/* Quoted Message */
+.quoted-message-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--border);
+}
+
+.quote-toggle {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.quote-toggle:hover {
+    color: var(--text-primary);
+}
+
+.quote-icon {
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 0.7rem;
+}
+
+.quote-icon.expanded {
+    transform: rotate(90deg);
+}
+
+.quoted-message {
+    margin-top: 8px;
+    padding-left: 12px;
+    border-left: 3px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.quote-header {
+    font-style: italic;
+    margin-bottom: 8px;
+}
+
+.quote-content {
+    white-space: pre-wrap;
+}
+
+/* Inbox Header */
+.inbox-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.inbox-header h1 {
+    margin-bottom: 0;
+}
+
+.compose-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Compose Page */
+.compose-page {
+    max-width: 700px;
+    margin: 0 auto;
 }
 
 /* Responsive */

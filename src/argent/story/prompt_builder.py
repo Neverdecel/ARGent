@@ -235,15 +235,29 @@ class PromptBuilder:
 
     def _build_response_format(self, persona: AgentPersona) -> str:
         """Build the response format section."""
-        return "\n".join(
-            [
-                "# RESPONSE FORMAT",
-                f"- Write as {persona.display_name} would write in an {persona.channel}",
-                "- Keep responses natural - not too long unless rambling anxiously",
-                "- You can include a subject line if this feels like a new topic",
-                "- Stay fully in character",
-            ]
-        )
+        lines = [
+            "# RESPONSE FORMAT",
+            f"- Write as {persona.display_name} would write in an {persona.channel}",
+            "- Keep responses natural - not too long unless rambling anxiously",
+            "- Stay fully in character",
+        ]
+
+        if persona.channel == "email":
+            lines.extend(
+                [
+                    "",
+                    "## EMAIL SUBJECT LINE RULES",
+                    "- Include 'Subject: <brief subject>' on first line ONLY when:",
+                    "  * Starting a completely new topic",
+                    "  * Major conversation shift (new urgency, new demand)",
+                    "  * Escalating emotionally to a new level",
+                    "- DO NOT include subject for normal back-and-forth replies",
+                    "- Keep subjects brief (2-6 words), anxious/cryptic tone",
+                    "- After subject line, add blank line before email body",
+                ]
+            )
+
+        return "\n".join(lines)
 
     def _trust_to_description(self, trust_score: int) -> str:
         """Convert numeric trust score to natural language description."""
