@@ -254,10 +254,13 @@ def _get_agent(agent_id: str, settings: Settings) -> "BaseAgent | None":
                 gemini_api_key=settings.gemini_api_key,
                 model=settings.gemini_model,
             )
-        # Add more agents here as they're implemented
-        # elif agent_id == "miro":
-        #     from argent.agents.miro import MiroAgent
-        #     _agent_instances[agent_id] = MiroAgent(...)
+        elif agent_id == "miro":
+            from argent.agents.miro import MiroAgent
+
+            _agent_instances[agent_id] = MiroAgent(
+                gemini_api_key=settings.gemini_api_key,
+                model=settings.gemini_model,
+            )
 
     return _agent_instances.get(agent_id)
 
@@ -265,15 +268,48 @@ def _get_agent(agent_id: str, settings: Settings) -> "BaseAgent | None":
 # --- Page Routes ---
 
 
-@router.get("/inbox", response_class=HTMLResponse)
-async def inbox_page(
+@router.get("/hub", response_class=HTMLResponse)
+async def hub_page(
     request: Request,
-    channel: str | None = None,
     argent_session: Annotated[str | None, Cookie()] = None,
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> Response:
-    """Main inbox page - shows individual emails."""
+    """Hub page - choose between email and text channels."""
+    if not settings.web_inbox_enabled:
+        raise HTTPException(status_code=404, detail="Web inbox not enabled")
+
+    player = await _get_current_player(argent_session, db, settings)
+    if not player:
+        return RedirectResponse(url="/register", status_code=status.HTTP_303_SEE_OTHER)
+
+    if player.communication_mode != "web_only":
+        return RedirectResponse(url="/start", status_code=status.HTTP_303_SEE_OTHER)
+
+    # Get unread counts for each channel
+    inbox_service = _get_web_inbox_service(db)
+    email_unread = await inbox_service.get_unread_count(player.id, channel_filter="email")
+    sms_unread = await inbox_service.get_unread_count(player.id, channel_filter="sms")
+
+    return templates.TemplateResponse(
+        "hub.html",
+        {
+            "request": request,
+            "player": player,
+            "email_unread": email_unread,
+            "sms_unread": sms_unread,
+        },
+    )
+
+
+@router.get("/inbox", response_class=HTMLResponse)
+async def inbox_page(
+    request: Request,
+    argent_session: Annotated[str | None, Cookie()] = None,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    """Email inbox page - shows only email messages."""
     # Check if web inbox is enabled
     if not settings.web_inbox_enabled:
         raise HTTPException(status_code=404, detail="Web inbox not enabled")
@@ -288,10 +324,10 @@ async def inbox_page(
         # Redirect immersive mode players away
         return RedirectResponse(url="/start", status_code=status.HTTP_303_SEE_OTHER)
 
-    # Get individual messages (flat list, not grouped)
+    # Get email messages only
     inbox_service = _get_web_inbox_service(db)
-    messages = await inbox_service.get_messages(player.id, limit=50)
-    unread_count = await inbox_service.get_unread_count(player.id)
+    messages = await inbox_service.get_messages(player.id, channel_filter="email", limit=50)
+    unread_count = await inbox_service.get_unread_count(player.id, channel_filter="email")
 
     # Add avatar URLs to messages
     messages_with_avatars = [
@@ -317,7 +353,115 @@ async def inbox_page(
             "messages": messages_with_avatars,
             "unread_count": unread_count,
             "player": player,
-            "channel_filter": channel,
+        },
+    )
+
+
+@router.get("/text", response_class=HTMLResponse)
+async def text_page(
+    request: Request,
+    argent_session: Annotated[str | None, Cookie()] = None,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    """Text/SMS messages page - shows SMS conversations."""
+    if not settings.web_inbox_enabled:
+        raise HTTPException(status_code=404, detail="Web inbox not enabled")
+
+    player = await _get_current_player(argent_session, db, settings)
+    if not player:
+        return RedirectResponse(url="/register", status_code=status.HTTP_303_SEE_OTHER)
+
+    if player.communication_mode != "web_only":
+        return RedirectResponse(url="/start", status_code=status.HTTP_303_SEE_OTHER)
+
+    # Get SMS conversations (grouped by session)
+    inbox_service = _get_web_inbox_service(db)
+    conversations = await inbox_service.get_conversations(player.id, channel_filter="sms")
+
+    # Add avatar URLs to conversations
+    conversations_with_avatars = []
+    for conv in conversations:
+        latest_msg = conv.get("latest_message")
+        agent_id = latest_msg.agent_id if latest_msg else None
+        conversations_with_avatars.append({
+            "session_id": conv["session_id"],
+            "title": conv["title"],
+            "message_count": conv["message_count"],
+            "unread_count": conv["unread_count"],
+            "updated_at": conv["updated_at"],
+            "latest_preview": (latest_msg.content or "")[:80] if latest_msg else "",
+            "avatar_url": _get_agent_avatar_url(agent_id),
+        })
+
+    return templates.TemplateResponse(
+        "text.html",
+        {
+            "request": request,
+            "conversations": conversations_with_avatars,
+            "player": player,
+        },
+    )
+
+
+@router.get("/text/thread/{session_id}", response_class=HTMLResponse)
+async def text_thread_page(
+    request: Request,
+    session_id: str,
+    argent_session: Annotated[str | None, Cookie()] = None,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    """SMS conversation thread view - chat-style interface."""
+    if not settings.web_inbox_enabled:
+        raise HTTPException(status_code=404, detail="Web inbox not enabled")
+
+    player = await _get_current_player(argent_session, db, settings)
+    if not player:
+        return RedirectResponse(url="/register", status_code=status.HTTP_303_SEE_OTHER)
+
+    if player.communication_mode != "web_only":
+        return RedirectResponse(url="/start", status_code=status.HTTP_303_SEE_OTHER)
+
+    inbox_service = _get_web_inbox_service(db)
+    messages = await inbox_service.get_conversation_messages(player.id, session_id)
+
+    if not messages:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Mark conversation as read
+    await inbox_service.mark_conversation_read(player.id, session_id)
+    await db.commit()
+
+    # Determine conversation title from participants
+    participants = {m.sender_name for m in messages if m.sender_name and m.sender_name != "You"}
+    title = ", ".join(sorted(participants)) if participants else "Text Message"
+
+    # Get avatar for the contact
+    agent_id = next((m.agent_id for m in messages if m.agent_id), None)
+    avatar_url = _get_agent_avatar_url(agent_id)
+
+    # Messages in chronological order (oldest first for chat view)
+    messages_data = [
+        {
+            "id": msg.id,
+            "direction": msg.direction,
+            "sender_name": msg.sender_name,
+            "content": msg.content,
+            "created_at": msg.created_at,
+        }
+        for msg in messages
+    ]
+
+    return templates.TemplateResponse(
+        "text_thread.html",
+        {
+            "request": request,
+            "session_id": session_id,
+            "title": title,
+            "messages": messages_data,
+            "player": player,
+            "avatar_url": avatar_url,
         },
     )
 
@@ -403,9 +547,9 @@ async def conversation_page(
 
 def _get_available_contacts() -> list[dict]:
     """Get list of agents the player can contact."""
-    # For now, just Ember
     return [
-        {"id": "ember", "name": "Ember Vance"},
+        {"id": "ember", "name": "Ember Vance", "channel": "email"},
+        {"id": "miro", "name": "Miro", "channel": "sms"},
     ]
 
 
@@ -731,21 +875,10 @@ async def _generate_agent_response_background(
                     content=response.content,
                     agent_id=agent_id,
                     subject=response.subject,
+                    session_id=session_id,
                 ),
                 display_channel="email" if agent_id == "ember" else "sms",
             )
-
-            # Update session_id on the agent's response message
-            result = await db.execute(
-                select(Message)
-                .where(Message.player_id == player_id)
-                .where(Message.agent_id == agent_id)
-                .order_by(Message.created_at.desc())
-                .limit(1)
-            )
-            agent_message = result.scalar_one_or_none()
-            if agent_message:
-                agent_message.session_id = session_id
 
             await db.commit()
 
