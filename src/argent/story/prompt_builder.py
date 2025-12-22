@@ -243,17 +243,19 @@ class PromptBuilder:
         ]
 
         if persona.channel == "email":
-            lines.extend([
-                "",
-                "## EMAIL SUBJECT LINE RULES",
-                "- Include 'Subject: <brief subject>' on first line ONLY when:",
-                "  * Starting a completely new topic",
-                "  * Major conversation shift (new urgency, new demand)",
-                "  * Escalating emotionally to a new level",
-                "- DO NOT include subject for normal back-and-forth replies",
-                "- Keep subjects brief (2-6 words), anxious/cryptic tone",
-                "- After subject line, add blank line before email body",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "## EMAIL SUBJECT LINE RULES",
+                    "- Include 'Subject: <brief subject>' on first line ONLY when:",
+                    "  * Starting a completely new topic",
+                    "  * Major conversation shift (new urgency, new demand)",
+                    "  * Escalating emotionally to a new level",
+                    "- DO NOT include subject for normal back-and-forth replies",
+                    "- Keep subjects brief (2-6 words), anxious/cryptic tone",
+                    "- After subject line, add blank line before email body",
+                ]
+            )
 
         return "\n".join(lines)
 
