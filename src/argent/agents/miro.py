@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from google.adk import Runner
 from google.adk.agents import LlmAgent
@@ -55,7 +55,9 @@ class MiroAgent(BaseAgent):
         os.environ["GOOGLE_API_KEY"] = gemini_api_key
 
         # Initialize session service for conversation state
-        self._session_service = InMemorySessionService()  # type: ignore[no-untyped-call]
+        # ADK's InMemorySessionService may not have type stubs in some versions
+        session_service: Any = InMemorySessionService
+        self._session_service = session_service()
 
         # Map player sessions to ADK session IDs
         self._player_sessions: dict[str, str] = {}
