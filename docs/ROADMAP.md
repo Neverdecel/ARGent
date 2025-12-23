@@ -4,29 +4,44 @@ A prioritized roadmap for ARGent development. Features are grouped by milestone 
 
 ---
 
+## Why These Milestones Matter
+
+Every milestone serves the core vision: **agents that feel alive**. Here's how each phase contributes:
+
+| Milestone | Contribution to Realism |
+|-----------|------------------------|
+| **1. MVP** | Foundation — persistent entities with memory and goals |
+| **2. Immersion** | Agents feel like real people — consistent, mortal, aware of time |
+| **3. Multi-Agent** | Agents exist beyond the player — they talk, scheme, betray |
+| **4. World** | Agents respond to an evolving world, not just to you |
+| **5. Memory** | True long-term persistence — agents remember across weeks |
+| **6. Inheritance** | Agent mortality and continuity — same channel, different voice |
+
+---
+
 ## Milestone 1: Core Gameplay Loop (MVP)
-*Goal: A complete player experience from registration to multi-day engagement*
+*Goal: Foundation for persistent entities with memory and goals*
 
 ### 1.1 Complete Agent Response Pipeline
 The current pipeline generates responses but doesn't extract state changes.
 
-- [ ] **Trust extraction from responses**
+- [x] **Trust extraction from responses**
   - Classify agent responses for trust-relevant content
   - Update trust scores based on player agreement/disagreement
   - Log trust events with reasons
-  - *Files: `src/agents/`, `src/services/`*
+  - *Files: `src/services/classification.py`, `src/services/trust.py`*
 
-- [ ] **Knowledge extraction**
+- [x] **Knowledge extraction**
   - Extract facts revealed in conversations
   - Store in `player_knowledge` table
   - Inject known facts into agent prompts (avoid repetition)
-  - *Files: `src/agents/prompt_builder.py`, `src/models/`*
+  - *Files: `src/services/knowledge.py`, `src/api/inbox.py`*
 
-- [ ] **Response classification**
+- [x] **Response classification**
   - Classify player messages for intent, sentiment, topics
   - Store classification results
   - Use for trust calculation and trigger evaluation
-  - *Files: `src/services/classification.py` (new)*
+  - *Files: `src/services/classification.py`*
 
 ### 1.2 Evidence Dashboard
 The in-fiction page where players use their key.
@@ -75,7 +90,7 @@ Currently only time-based triggers. Need condition evaluation.
 ---
 
 ## Milestone 2: Immersion Systems
-*Goal: Agents feel like real people with consistent behavior*
+*Goal: Agents feel like real people — consistent, mortal, aware of time*
 
 ### 2.1 Agent Consistency (Claims Tracking)
 Prevent agents from contradicting themselves.
@@ -136,7 +151,7 @@ Adapt pacing to player activity.
 ---
 
 ## Milestone 3: Multi-Agent Orchestration
-*Goal: Agents aware of each other, coordinated storytelling*
+*Goal: Agents exist beyond the player — they talk, scheme, betray*
 
 ### 3.1 Inter-Agent Awareness
 Agents learn about each other through player actions.
@@ -187,7 +202,7 @@ Expand the cast based on story progression.
 ---
 
 ## Milestone 4: World Simulation
-*Goal: Per-player world state that evolves*
+*Goal: Agents respond to an evolving world, not just to you*
 
 ### 4.1 Exposure System
 Track how "visible" the player has become.
@@ -234,7 +249,7 @@ Thursday deadline has soft consequences.
 ---
 
 ## Milestone 5: Long-Term Memory
-*Goal: Semantic search over conversation history*
+*Goal: True persistence — agents remember across weeks and months*
 
 ### 5.1 Memory Bank Integration
 Connect to Vertex AI Memory Bank (or alternative).
@@ -265,7 +280,7 @@ Pull relevant context from past conversations.
 ---
 
 ## Milestone 6: Channel Inheritance
-*Goal: New characters can take over channels*
+*Goal: Agent mortality and continuity — same channel, different voice*
 
 - [ ] **Channel ownership model**
   - Track current owner per channel per player

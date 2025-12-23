@@ -19,7 +19,7 @@
 
 ---
 
-**ARGent** is an AI-driven alternate reality game where the story finds you through your inbox. No app to check. No game interface. Just messages from AI characters who remember everything, adapt to your choices, and blur the line between fiction and reality.
+**ARGent** is an alternate reality game where AI characters feel genuinely alive. No app to check. No game interface. Just messages from entities with persistent memory, consistent personalities, and their own agendas — arriving through your real inbox, blurring the line between fiction and reality.
 
 ## The Experience
 
@@ -32,6 +32,16 @@
 How did they get your number? Who's telling the truth? What did you actually receive?
 
 **Trust is the game.** Not puzzles. Not plot points. Deciding who to believe—and living with the consequences.
+
+## Philosophy
+
+ARGent is built on three pillars:
+
+- **Memory** — Agents remember what you said days ago, what you promised, what you're pretending to forget
+- **Character** — Each agent has goals, fears, and stakes. They pursue their own agenda, not a script
+- **Autonomy** — Characters exist whether you're watching or not. Go silent for a week, and the world moves on without you
+
+The result: characters that feel like people with something at stake, not chatbots waiting for prompts.
 
 ## How It Works
 
@@ -70,10 +80,10 @@ Characters reach out through different channels. Each has their own personality,
 - **Webhook processing** — Inbound replies processed in real-time with signature verification
 
 ### AI Agents
-- **Google ADK integration** — Agents powered by Gemini 2.5 Flash with structured persona system
-- **Dynamic prompts** — Context-aware system prompts built from personality, trust level, conversation history, and player knowledge
-- **Distinct personalities** — Each agent has unique voice, communication patterns, and behavioral rules
-- **First contact generation** — Agents initiate contact with contextually appropriate opening messages
+- **Persistent entities** — Agents powered by Gemini 2.5 Flash with memory that spans sessions and days
+- **Goal-driven behavior** — Each agent pursues their own agenda, adapting strategy based on your responses
+- **Consistent character** — Personalities that don't break, with claims tracking to prevent self-contradiction
+- **Proactive contact** — Agents reach out when they have reason to, not on a fixed schedule
 
 ### Story Engine
 - **Trust tracking** — Per-agent trust scores (-100 to 100) with event logging
@@ -190,6 +200,7 @@ See [docs/README.md](docs/README.md) for full navigation.
 | Topic | Link |
 |-------|------|
 | Project Vision | [docs/PROJECT_VISION.md](docs/PROJECT_VISION.md) |
+| Agent Philosophy | [docs/AGENT_PHILOSOPHY.md](docs/AGENT_PHILOSOPHY.md) |
 | Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Development Roadmap | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Story Premise | [docs/story/PREMISE.md](docs/story/PREMISE.md) |
@@ -205,5 +216,5 @@ ARGent is open source under the MIT License. We're building in the open—contri
 ---
 
 <p align="center">
-  <strong>ARGent</strong> — Where AI agents play the game with you.
+  <strong>ARGent</strong> — Persistent entities, not stateless functions.
 </p>
