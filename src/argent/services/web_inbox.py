@@ -19,7 +19,6 @@ from argent.services.base import (
     Direction,
     InboundMessage,
     OutboundMessage,
-    SendResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,12 +40,15 @@ class WebInboxService(BaseChannelService):
 
     async def send_message(
         self, message: OutboundMessage, display_channel: str = "email"
-    ) -> SendResult:
+    ) -> Message:
         """Store message in database for web inbox display.
 
         Args:
             message: The message to store
             display_channel: How to display this message - 'email' or 'sms'
+
+        Returns:
+            The created Message object
         """
         # Generate a unique ID for this message
         message_id = uuid4()
@@ -81,10 +83,7 @@ class WebInboxService(BaseChannelService):
             message.player_id,
         )
 
-        return SendResult(
-            success=True,
-            external_id=f"web-{message_id}",
-        )
+        return db_message
 
     async def store_player_message(
         self,
