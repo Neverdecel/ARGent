@@ -853,7 +853,7 @@ async def _generate_agent_response_background(
 
             # Build agent context
             trust_score = await _get_player_trust_score(db, player_id, agent_id)
-            knowledge = await _get_player_knowledge(db, player_id)
+            player_knowledge_facts = await _get_player_knowledge(db, player_id)
             history = await _get_conversation_history(db, player_id, session_id)
 
             context = AgentContext(
@@ -862,7 +862,7 @@ async def _generate_agent_response_background(
                 player_message=player_message,
                 conversation_history=history,
                 player_trust_score=trust_score,
-                player_knowledge=knowledge,
+                player_knowledge=player_knowledge_facts,
             )
 
             # Generate response
@@ -870,7 +870,7 @@ async def _generate_agent_response_background(
 
             # Store agent response
             inbox_service = _get_web_inbox_service(db)
-            outbound_message = await inbox_service.send_message(
+            outbound_message = await inbox_service.send_and_store(
                 OutboundMessage(
                     player_id=player_id,
                     recipient="",  # Not used for web inbox
@@ -883,7 +883,8 @@ async def _generate_agent_response_background(
             )
 
             # Extract trust and knowledge from the exchange
-            from argent.services import classification, knowledge, trust
+            from argent.services import classification, trust
+            from argent.services import knowledge as knowledge_service
 
             extraction = await classification.extract_from_exchange(
                 player_message=player_message,
@@ -905,7 +906,7 @@ async def _generate_agent_response_background(
 
             # Store extracted knowledge
             if extraction.knowledge_items:
-                await knowledge.add_knowledge(
+                await knowledge_service.add_knowledge(
                     db=db,
                     player_id=player_id,
                     facts=extraction.knowledge_items,

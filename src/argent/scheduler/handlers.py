@@ -265,7 +265,7 @@ async def _send_miro_to_web_inbox(
         session_id=session_id,
     )
 
-    await web_inbox_service.send_message(message, display_channel="sms")
+    await web_inbox_service.send_and_store(message, display_channel="sms")
 
 
 async def _send_miro_via_sms(

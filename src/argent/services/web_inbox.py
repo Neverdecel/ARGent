@@ -19,6 +19,7 @@ from argent.services.base import (
     Direction,
     InboundMessage,
     OutboundMessage,
+    SendResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,10 +39,25 @@ class WebInboxService(BaseChannelService):
     def channel(self) -> Channel:
         return Channel.WEB
 
-    async def send_message(
+    async def send_message(self, message: OutboundMessage) -> SendResult:
+        """Store message in database for web inbox display.
+
+        Args:
+            message: The message to store
+
+        Returns:
+            SendResult with success status
+        """
+        db_message = await self.send_and_store(message)
+        return SendResult(success=True, external_id=f"web-{db_message.id}")
+
+    async def send_and_store(
         self, message: OutboundMessage, display_channel: str = "email"
     ) -> Message:
-        """Store message in database for web inbox display.
+        """Store message in database and return the Message record.
+
+        Use this when you need access to the created Message object.
+        For simple sends, use send_message() instead.
 
         Args:
             message: The message to store
