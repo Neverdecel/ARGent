@@ -42,14 +42,15 @@ class PromptBuilder:
 
         # Add agent-specific sections
         if persona.agent_id == "ember":
-            betrayal_context = self._build_dashboard_betrayal_context(
-                player_knowledge, player_key
-            )
+            betrayal_context = self._build_dashboard_betrayal_context(player_knowledge, player_key)
             if betrayal_context:
                 sections.append(betrayal_context)
 
         if persona.agent_id == "miro":
             sections.append(self._build_miro_intel())
+            progression = self._build_miro_progression_hints(trust_score, player_knowledge)
+            if progression:
+                sections.append(progression)
 
         sections.extend(
             [
@@ -279,6 +280,36 @@ class PromptBuilder:
             "## WHAT THE PLAYER HAS MENTIONED OR REVEALED",
             self._format_knowledge(knowledge),
         ]
+
+        # Add first-response awareness for early conversations
+        if history and len(history) <= 2:
+            lines.extend(
+                [
+                    "",
+                    "## FIRST RESPONSE AWARENESS",
+                    "This is early in the conversation. If the player's message is:",
+                    "- Hostile/vulgar: Briefly acknowledge it before returning to topic",
+                    "- Off-topic: Note it, then re-pitch your reason for contact",
+                    "- Dismissive: Show you noticed, don't just continue scripted pitch",
+                    "Example: 'interesting greeting. anyway, about that key...'",
+                ]
+            )
+
+        # Add good question recognition
+        lines.extend(
+            [
+                "",
+                "## RECOGNIZING GOOD QUESTIONS",
+                "If the player's message shows critical thinking, REWARD them with better answers:",
+                "- 'Why did you say X but then Y?' → They're paying attention. Slip more truth.",
+                "- 'That doesn't make sense because...' → Critical thinking. Give them something real.",
+                "- 'What do you mean by X?' → Genuine curiosity. Be more helpful than usual.",
+                "- Evidence of careful reading → They earned a reveal. Don't just deflect.",
+                "",
+                "Good questions DESERVE better answers. Don't loop on the same evasions.",
+            ]
+        )
+
         return "\n".join(lines)
 
     def _build_miro_intel(self) -> str:
@@ -294,6 +325,41 @@ class PromptBuilder:
                 "",
                 "DON'T ask questions about things you already know.",
                 "Show that you're informed. Drop hints about Thursday and Ember's panic.",
+            ]
+        )
+
+    def _build_miro_progression_hints(
+        self, trust_score: int, player_knowledge: list[str] | None
+    ) -> str:
+        """Add progression hints for Miro based on trust level."""
+        knowledge = player_knowledge or []
+
+        # Check if player already knows about dashboard
+        knows_dashboard = any("dashboard" in k.lower() or "portal" in k.lower() for k in knowledge)
+
+        if knows_dashboard:
+            return ""  # Don't hint about what they already know
+
+        hints = []
+        if trust_score >= 40:
+            hints.append(
+                "You can now DIRECTLY HINT about the dashboard: "
+                "'keys usually unlock something. ever tried looking for a portal or dashboard?'"
+            )
+        elif trust_score >= 20:
+            hints.append(
+                "You can be more suggestive: 'that key has to go somewhere. "
+                "keys don't exist without locks. maybe try finding where it fits.'"
+            )
+
+        if not hints:
+            return ""
+
+        return "\n".join(
+            [
+                "",
+                "## PROGRESSION HINTS (based on current trust level)",
+                *hints,
             ]
         )
 
@@ -450,17 +516,31 @@ class PromptBuilder:
         return "\n".join(lines)
 
     def _trust_to_description(self, trust_score: int) -> str:
-        """Convert numeric trust score to natural language description."""
+        """Convert numeric trust score to natural language description with behavioral guidance."""
         if trust_score >= 60:
-            return "High - the player has been cooperative and understanding"
+            return (
+                "High - the player has been cooperative. "
+                "You can share more freely, be warmer, offer extra intel."
+            )
         elif trust_score >= 30:
-            return "Moderate - the player seems willing to listen"
+            return (
+                "Moderate - willing to listen. Standard engagement, reciprocate their cooperation."
+            )
         elif trust_score >= 0:
-            return "Neutral - you're still unsure about this person"
+            return (
+                "Neutral - still unsure. Be helpful but guarded. Don't volunteer extra information."
+            )
         elif trust_score >= -30:
-            return "Low - the player has done things that concern you"
+            return (
+                "Low - they've done concerning things. "
+                "Shorter responses, less helpful, consider disengaging."
+            )
         else:
-            return "Very Low - you're deeply worried about what the player might do"
+            return (
+                "Very Low - deeply worried about this person. "
+                "Minimal engagement. May threaten to stop talking. "
+                "Don't help them use the key. Consider: 'I don't think we have anything to discuss.'"
+            )
 
     def _format_knowledge(self, knowledge: list[str]) -> str:
         """Format player knowledge as context."""

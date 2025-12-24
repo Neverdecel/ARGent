@@ -46,6 +46,7 @@ app = FastAPI(
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+
 # Serve robots.txt at root (for search engine exclusion)
 @app.get("/robots.txt", include_in_schema=False)
 async def robots_txt() -> FileResponse:
