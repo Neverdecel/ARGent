@@ -49,12 +49,15 @@ class BaseAgent(ABC):
         ...
 
     @abstractmethod
-    async def generate_response(self, context: AgentContext) -> AgentResponse:
+    async def generate_response(
+        self, context: AgentContext, player_key: str | None = None
+    ) -> AgentResponse:
         """Generate a response to the player's message.
 
         Args:
             context: The context for this interaction including player message,
                      conversation history, trust scores, and knowledge.
+            player_key: The player's unique key (optional, used for betrayal context).
 
         Returns:
             AgentResponse containing the message content and any state updates.

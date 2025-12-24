@@ -112,15 +112,19 @@ class MiroAgent(BaseAgent):
 
         return self._player_sessions[key]
 
-    async def generate_response(self, context: AgentContext) -> AgentResponse:
+    async def generate_response(
+        self, context: AgentContext, player_key: str | None = None
+    ) -> AgentResponse:
         """Generate Miro's response to a player message.
 
         Args:
             context: The context for this interaction
+            player_key: Unused by Miro (included for interface compatibility)
 
         Returns:
             AgentResponse containing Miro's reply
         """
+        # Note: player_key is not used by Miro - only Ember has betrayal context
         # Build the dynamic system prompt with current context
         system_prompt = self._prompt_builder.build_system_prompt(
             persona=self._persona,

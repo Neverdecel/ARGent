@@ -27,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from argent.config import Settings, get_settings
 from argent.database import get_db
 from argent.models import Player
-from argent.models.player import Message, PlayerKnowledge, PlayerTrust
+from argent.models.player import Message, PlayerKey, PlayerKnowledge, PlayerTrust
 from argent.services.base import OutboundMessage
 from argent.services.web_inbox import WebInboxService
 from argent.story import load_character
@@ -856,6 +856,12 @@ async def _generate_agent_response_background(
             player_knowledge_facts = await _get_player_knowledge(db, player_id)
             history = await _get_conversation_history(db, player_id, session_id)
 
+            # Get player's key for betrayal context
+            key_result = await db.execute(
+                select(PlayerKey.key_value).where(PlayerKey.player_id == player_id)
+            )
+            player_key = key_result.scalar_one_or_none()
+
             context = AgentContext(
                 player_id=player_id,
                 session_id=session_id,
@@ -865,8 +871,8 @@ async def _generate_agent_response_background(
                 player_knowledge=player_knowledge_facts,
             )
 
-            # Generate response
-            response = await agent.generate_response(context)
+            # Generate response (pass player_key for Ember's betrayal context)
+            response = await agent.generate_response(context, player_key=player_key)
 
             # Store agent response
             inbox_service = _get_web_inbox_service(db)

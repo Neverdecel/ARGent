@@ -113,11 +113,14 @@ class EmberAgent(BaseAgent):
 
         return self._player_sessions[key]
 
-    async def generate_response(self, context: AgentContext) -> AgentResponse:
+    async def generate_response(
+        self, context: AgentContext, player_key: str | None = None
+    ) -> AgentResponse:
         """Generate Ember's response to a player message.
 
         Args:
             context: The context for this interaction
+            player_key: The player's unique key (for betrayal context)
 
         Returns:
             AgentResponse containing Ember's reply
@@ -128,6 +131,7 @@ class EmberAgent(BaseAgent):
             trust_score=context.player_trust_score,
             player_knowledge=context.player_knowledge,
             conversation_history=context.conversation_history,
+            player_key=player_key,
         )
 
         # Create a fresh agent with the current system prompt
@@ -258,6 +262,11 @@ class EmberAgent(BaseAgent):
             subject = lines[0][8:].strip()  # Remove "Subject:" prefix
             content = lines[1].strip() if len(lines) > 1 else ""
 
+        # Use cryptic fallback if no subject extracted
+        if not subject:
+            subject = "Thursday"
+            logger.warning("No subject extracted from first contact, using fallback")
+
         logger.info(
             "First contact generated: subject=%r, content_length=%d",
             subject,
@@ -266,7 +275,7 @@ class EmberAgent(BaseAgent):
 
         return AgentResponse(
             content=content,
-            subject=subject or "You have a new message",
+            subject=subject,
             trust_delta=0,
             new_knowledge=[],
         )

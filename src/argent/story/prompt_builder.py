@@ -16,6 +16,7 @@ class PromptBuilder:
         trust_score: int = 0,
         player_knowledge: list[str] | None = None,
         conversation_history: list[dict] | None = None,
+        player_key: str | None = None,
     ) -> str:
         """Build complete system prompt with dynamic context.
 
@@ -24,6 +25,7 @@ class PromptBuilder:
             trust_score: Current trust level (-100 to 100)
             player_knowledge: List of facts the player has learned
             conversation_history: Previous messages in this conversation
+            player_key: The player's unique key (for betrayal context)
 
         Returns:
             Complete system prompt for the agent
@@ -40,7 +42,9 @@ class PromptBuilder:
 
         # Add agent-specific sections
         if persona.agent_id == "ember":
-            betrayal_context = self._build_dashboard_betrayal_context(player_knowledge)
+            betrayal_context = self._build_dashboard_betrayal_context(
+                player_knowledge, player_key
+            )
             if betrayal_context:
                 sections.append(betrayal_context)
 
@@ -296,6 +300,7 @@ class PromptBuilder:
     def _build_dashboard_betrayal_context(
         self,
         player_knowledge: list[str] | None,
+        player_key: str | None = None,
     ) -> str:
         """Build context when player has accessed the evidence dashboard.
 
@@ -304,6 +309,7 @@ class PromptBuilder:
 
         Args:
             player_knowledge: List of facts the player has learned
+            player_key: The player's unique key value
 
         Returns:
             Betrayal context section, or empty string if not applicable
@@ -320,14 +326,27 @@ class PromptBuilder:
         if not dashboard_accessed:
             return ""
 
-        return "\n".join(
+        lines = [
+            "# CRITICAL: PLAYER BETRAYAL",
+            "",
+            "**THE PLAYER USED THE KEY.** They accessed the dashboard.",
+            "",
+        ]
+
+        # Add key reference if available
+        if player_key:
+            lines.extend(
+                [
+                    "## THE KEY THEY USED",
+                    f"The key you sent them: {player_key}",
+                    "You know EXACTLY what that unlocks. Don't pretend otherwise.",
+                    "",
+                ]
+            )
+
+        lines.extend(
             [
-                "# CRITICAL: PLAYER BETRAYAL",
-                "",
-                "**THE PLAYER USED THE KEY.** They accessed the dashboard.",
-                "",
-                "This changes EVERYTHING about how you interact with them:",
-                "",
+                "## WHAT THIS MEANS",
                 "- They LIED if they ever said they would delete it",
                 "- They went behind your back and looked at the files",
                 "- You are HURT, SCARED, and possibly ANGRY",
@@ -341,9 +360,17 @@ class PromptBuilder:
                 "- You may warn them about the consequences of knowing too much",
                 "- Do NOT pretend you don't know - the system logs everything",
                 "",
+                "## RESPONSE GUIDELINES",
+                "- Do NOT repeatedly ask 'what did you see' - ask ONCE, then react to their answer",
+                "- You already KNOW they accessed it. The logs told you. Be direct.",
+                "- Short, panicked fragments. Not long explanations.",
+                "- One focused question per message. Let silence do the work.",
+                "",
                 "This is a turning point in your relationship with the player.",
             ]
         )
+
+        return "\n".join(lines)
 
     def _build_rules(self, persona: AgentPersona) -> str:
         """Build the AI rules section."""
