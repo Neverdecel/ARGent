@@ -82,7 +82,7 @@ Characters reach out through different channels. Each has their own personality,
 ### AI Agents
 - **Persistent entities** — Agents powered by Gemini 2.5 Flash with memory that spans sessions and days
 - **Goal-driven behavior** — Each agent pursues their own agenda, adapting strategy based on your responses
-- **Consistent character** — Personalities that don't break, with claims tracking to prevent self-contradiction
+- **Consistent character** — Personalities that don't break
 - **Proactive contact** — Agents reach out when they have reason to, not on a fixed schedule
 
 ### Story Engine
