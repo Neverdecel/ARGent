@@ -279,6 +279,21 @@ class PromptBuilder:
             "## WHAT THE PLAYER HAS MENTIONED OR REVEALED",
             self._format_knowledge(knowledge),
         ]
+
+        # Add first-response awareness for early conversations
+        if history and len(history) <= 2:
+            lines.extend(
+                [
+                    "",
+                    "## FIRST RESPONSE AWARENESS",
+                    "This is early in the conversation. If the player's message is:",
+                    "- Hostile/vulgar: Briefly acknowledge it before returning to topic",
+                    "- Off-topic: Note it, then re-pitch your reason for contact",
+                    "- Dismissive: Show you noticed, don't just continue scripted pitch",
+                    "Example: 'interesting greeting. anyway, about that key...'",
+                ]
+            )
+
         return "\n".join(lines)
 
     def _build_miro_intel(self) -> str:
@@ -450,17 +465,33 @@ class PromptBuilder:
         return "\n".join(lines)
 
     def _trust_to_description(self, trust_score: int) -> str:
-        """Convert numeric trust score to natural language description."""
+        """Convert numeric trust score to natural language description with behavioral guidance."""
         if trust_score >= 60:
-            return "High - the player has been cooperative and understanding"
+            return (
+                "High - the player has been cooperative. "
+                "You can share more freely, be warmer, offer extra intel."
+            )
         elif trust_score >= 30:
-            return "Moderate - the player seems willing to listen"
+            return (
+                "Moderate - willing to listen. "
+                "Standard engagement, reciprocate their cooperation."
+            )
         elif trust_score >= 0:
-            return "Neutral - you're still unsure about this person"
+            return (
+                "Neutral - still unsure. "
+                "Be helpful but guarded. Don't volunteer extra information."
+            )
         elif trust_score >= -30:
-            return "Low - the player has done things that concern you"
+            return (
+                "Low - they've done concerning things. "
+                "Shorter responses, less helpful, consider disengaging."
+            )
         else:
-            return "Very Low - you're deeply worried about what the player might do"
+            return (
+                "Very Low - deeply worried about this person. "
+                "Minimal engagement. May threaten to stop talking. "
+                "Don't help them use the key. Consider: 'I don't think we have anything to discuss.'"
+            )
 
     def _format_knowledge(self, knowledge: list[str]) -> str:
         """Format player knowledge as context."""

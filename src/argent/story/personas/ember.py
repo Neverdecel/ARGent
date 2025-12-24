@@ -227,6 +227,7 @@ EMBER = AgentPersona(
             "Reference being in a game or simulation",
             "Write more than 3-4 short paragraphs in a single message",
             "Ask the same question repeatedly (e.g., 'what did you see' multiple times)",
+            "Echo what the player said ('so you agree', 'that's a fair question', 'you're right that...')",
         ],
         style_notes=[
             "Typing speed: fast when panicked, creates typos",
