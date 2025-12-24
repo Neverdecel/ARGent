@@ -42,14 +42,15 @@ class PromptBuilder:
 
         # Add agent-specific sections
         if persona.agent_id == "ember":
-            betrayal_context = self._build_dashboard_betrayal_context(
-                player_knowledge, player_key
-            )
+            betrayal_context = self._build_dashboard_betrayal_context(player_knowledge, player_key)
             if betrayal_context:
                 sections.append(betrayal_context)
 
         if persona.agent_id == "miro":
             sections.append(self._build_miro_intel())
+            progression = self._build_miro_progression_hints(trust_score, player_knowledge)
+            if progression:
+                sections.append(progression)
 
         sections.extend(
             [
@@ -294,6 +295,21 @@ class PromptBuilder:
                 ]
             )
 
+        # Add good question recognition
+        lines.extend(
+            [
+                "",
+                "## RECOGNIZING GOOD QUESTIONS",
+                "If the player's message shows critical thinking, REWARD them with better answers:",
+                "- 'Why did you say X but then Y?' → They're paying attention. Slip more truth.",
+                "- 'That doesn't make sense because...' → Critical thinking. Give them something real.",
+                "- 'What do you mean by X?' → Genuine curiosity. Be more helpful than usual.",
+                "- Evidence of careful reading → They earned a reveal. Don't just deflect.",
+                "",
+                "Good questions DESERVE better answers. Don't loop on the same evasions.",
+            ]
+        )
+
         return "\n".join(lines)
 
     def _build_miro_intel(self) -> str:
@@ -309,6 +325,41 @@ class PromptBuilder:
                 "",
                 "DON'T ask questions about things you already know.",
                 "Show that you're informed. Drop hints about Thursday and Ember's panic.",
+            ]
+        )
+
+    def _build_miro_progression_hints(
+        self, trust_score: int, player_knowledge: list[str] | None
+    ) -> str:
+        """Add progression hints for Miro based on trust level."""
+        knowledge = player_knowledge or []
+
+        # Check if player already knows about dashboard
+        knows_dashboard = any("dashboard" in k.lower() or "portal" in k.lower() for k in knowledge)
+
+        if knows_dashboard:
+            return ""  # Don't hint about what they already know
+
+        hints = []
+        if trust_score >= 40:
+            hints.append(
+                "You can now DIRECTLY HINT about the dashboard: "
+                "'keys usually unlock something. ever tried looking for a portal or dashboard?'"
+            )
+        elif trust_score >= 20:
+            hints.append(
+                "You can be more suggestive: 'that key has to go somewhere. "
+                "keys don't exist without locks. maybe try finding where it fits.'"
+            )
+
+        if not hints:
+            return ""
+
+        return "\n".join(
+            [
+                "",
+                "## PROGRESSION HINTS (based on current trust level)",
+                *hints,
             ]
         )
 
@@ -473,13 +524,11 @@ class PromptBuilder:
             )
         elif trust_score >= 30:
             return (
-                "Moderate - willing to listen. "
-                "Standard engagement, reciprocate their cooperation."
+                "Moderate - willing to listen. Standard engagement, reciprocate their cooperation."
             )
         elif trust_score >= 0:
             return (
-                "Neutral - still unsure. "
-                "Be helpful but guarded. Don't volunteer extra information."
+                "Neutral - still unsure. Be helpful but guarded. Don't volunteer extra information."
             )
         elif trust_score >= -30:
             return (

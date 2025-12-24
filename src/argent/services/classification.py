@@ -71,12 +71,16 @@ Analyze this exchange and determine:
 3. What was the player trying to accomplish?
 
 Trust scoring guide:
-- Player agrees with agent, shares info, cooperates: +5 to +15
-- Player is neutral, asking general questions: 0 to +5
-- Player is suspicious, challenging, or evasive: -5 to -10
-- Player reveals they trust another agent more: -10 to -15
-- Player catches agent in contradiction or lie: -15 to -20
-- Player explicitly threatens or attacks: -20
+- Player agrees, cooperates, shares info openly: +5 to +15
+- Player asks neutral or clarifying questions: 0 to +5
+- Player asks about contradictions with reasoning (e.g., "that doesn't match what you said"): +5 to +10 (shows engagement!)
+- Player catches agent in a lie WITH evidence/reasoning: +3 to +8 (they're paying attention - reward this!)
+- Player politely pushes for truth: +2 to +5 (persistent but respectful)
+- Player reveals they trust another agent more: -5 to -10
+- Player aggressively demands answers with hostile tone: -5 to -10
+- Player makes threats, insults, or attacks: -15 to -20
+
+IMPORTANT: Curiosity is NOT hostility. A player asking "that doesn't make sense because X" is ENGAGED and should be rewarded. Only penalize actual rudeness, threats, or insults.
 
 Return ONLY valid JSON in this exact format:
 {{
