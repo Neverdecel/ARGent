@@ -32,9 +32,7 @@ async def validate_key(db: AsyncSession, key_value: str) -> PlayerKey | None:
     # Normalize key format (uppercase, with dashes)
     normalized = key_value.strip().upper()
 
-    result = await db.execute(
-        select(PlayerKey).where(PlayerKey.key_value == normalized)
-    )
+    result = await db.execute(select(PlayerKey).where(PlayerKey.key_value == normalized))
     return result.scalar_one_or_none()
 
 
