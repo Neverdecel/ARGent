@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>INV-7 Internal Portal</title>
+    <link rel="stylesheet" href="/static/evidence.css">
+</head>
+<body>
+    <!-- Corporate Header -->
+    <div class="corp-header">
+        <div class="corp-logo">
+            <span class="logo-icon">&#9632;</span>
+            <span class="logo-text">INVICTUS HOLDINGS</span>
+        </div>
+        <div class="corp-nav">
+            <span class="nav-item">Internal Network</span>
+            <span class="nav-separator">|</span>
+            <span class="nav-item">Secure Portal</span>
+        </div>
+    </div>
+
+    <div class="portal-container">
+        {% if access_granted %}
+        <!-- ACCESS GRANTED STATE -->
+        <div class="access-banner access-granted">
+            <span class="access-icon">&#10003;</span>
+            CREDENTIAL VERIFIED - ACCESS LEVEL 3
+        </div>
+
+        {% if first_access %}
+        <div class="system-notice">
+            <strong>NOTICE:</strong> First access recorded. Activity is logged.
+            <br>Remaining access attempts: {{ remaining_accesses }}
+        </div>
+        {% else %}
+        <div class="system-notice">
+            Remaining access attempts: {{ remaining_accesses }}
+        </div>
+        {% endif %}
+
+        <!-- Document Navigation -->
+        <div class="doc-nav">
+            <div class="doc-nav-header">AVAILABLE DOCUMENTS</div>
+            <ul class="doc-list">
+                <li><a href="#doc-security">Security Access Log</a></li>
+                <li><a href="#doc-memo1">Internal Memo #7734-A</a></li>
+                <li><a href="#doc-memo2">Internal Memo #7734-B</a></li>
+                <li><a href="#doc-incident">Incident Report [REDACTED]</a></li>
+                <li><a href="#doc-email">Email Thread Fragment</a></li>
+            </ul>
+        </div>
+
+        <!-- Document: Security Log -->
+        <div class="document" id="doc-security">
+            <div class="doc-header">
+                <span class="classification internal">INTERNAL</span>
+                <span class="doc-title">INV-7 SECURITY LOG</span>
+                <span class="doc-date">10/15/2024</span>
+            </div>
+            <div class="doc-content">
+                <pre class="log-content">
+ASSET: threshold-primary.vault
+LOCATION: Sublevel 3, Wing C
+
+03:42:17 - ACCESS DENIED (keycard malfunction?)
+03:42:31 - ACCESS GRANTED - BADGE #E-4471
+03:47:02 - DOWNLOAD INITIATED - /archives/2023-Q3/
+03:48:14 - DOWNLOAD INITIATED - /threshold/deployment/
+03:51:44 - SESSION TERMINATED (irregular)
+04:12:08 - ADMIN OVERRIDE - [SYSTEM]
+04:12:09 - AUDIT LOG MODIFIED
+
+--- END LOG SEGMENT ---</pre>
+            </div>
+        </div>
+
+        <!-- Document: Memo 1 -->
+        <div class="document" id="doc-memo1">
+            <div class="doc-header">
+                <span class="classification internal">INTERNAL</span>
+                <span class="doc-title">MEMORANDUM #7734-A</span>
+                <span class="doc-date">10/16/2024</span>
+            </div>
+            <div class="doc-content">
+                <p><strong>TO:</strong> Department Heads, Project Threshold<br>
+                <strong>FROM:</strong> Office of Internal Security<br>
+                <strong>RE:</strong> Containment Protocol Following Unauthorized Access</p>
+
+                <hr class="memo-divider">
+
+                <p>As of 04:30 this morning, an unauthorized data extraction was detected on the Threshold primary vault. The scope of the breach is still being assessed.</p>
+
+                <p>Effective immediately:</p>
+                <ul>
+                    <li>All project-related communications must use encrypted channels only</li>
+                    <li>External contacts are suspended pending security review</li>
+                    <li>Report any unusual contact to your direct supervisor</li>
+                </ul>
+
+                <p>Do not discuss this matter with personnel outside your immediate team.</p>
+
+                <p class="signature">
+                    D. Harmon<br>
+                    Director, Internal Security
+                </p>
+            </div>
+        </div>
+
+        <!-- Document: Memo 2 -->
+        <div class="document" id="doc-memo2">
+            <div class="doc-header">
+                <span class="classification confidential">CONFIDENTIAL</span>
+                <span class="doc-title">MEMORANDUM #7734-B</span>
+                <span class="doc-date">10/17/2024</span>
+            </div>
+            <div class="doc-content">
+                <p><strong>TO:</strong> Executive Committee<br>
+                <strong>FROM:</strong> D. Harmon, Internal Security<br>
+                <strong>RE:</strong> Escalation - Threshold Breach</p>
+
+                <hr class="memo-divider">
+
+                <p>We have identified the source of the breach. Badge #E-4471 belongs to a junior analyst with no authorization for Sublevel 3 access.</p>
+
+                <p>More concerning: the extracted files include <strong>deployment specifications</strong> and <strong>client target lists</strong>. If this data reaches external parties, we face significant exposure.</p>
+
+                <p>The analyst has been "reassigned." However, we have reason to believe data was transmitted externally before our intervention. We are tracing outbound communications.</p>
+
+                <p><strong>Thursday is our window.</strong> If the data surfaces publicly before then, containment becomes significantly more difficult.</p>
+
+                <p class="signature">
+                    D. Harmon<br>
+                    <em>cc: Legal, Executive Protection</em>
+                </p>
+            </div>
+        </div>
+
+        <!-- Document: Incident Report (Redacted) -->
+        <div class="document" id="doc-incident">
+            <div class="doc-header">
+                <span class="classification executive">EXECUTIVE EYES ONLY</span>
+                <span class="doc-title">INCIDENT REPORT #TH-7734</span>
+                <span class="doc-date">10/18/2024</span>
+            </div>
+            <div class="doc-content redacted-doc">
+                <p><strong>SUBJECT:</strong> Threshold Deployment Compromise</p>
+
+                <p>On <span class="redacted">October 15, 2024</span>, personnel from <span class="redacted">REDACTED</span> division discovered irregularities in <span class="redacted">PROJECT THRESHOLD</span> during routine audit.</p>
+
+                <p>Initial assessment suggests <span class="redacted">REDACTED REDACTED REDACTED REDACTED</span> which represents a Level 3 compliance issue under Section 4.2.</p>
+
+                <p>The following assets were compromised:</p>
+                <ul>
+                    <li><span class="redacted">THRESHOLD deployment manifest</span></li>
+                    <li><span class="redacted">Client targeting criteria</span></li>
+                    <li><span class="redacted">REDACTED operational parameters</span></li>
+                </ul>
+
+                <p>Personnel involved:</p>
+                <ul>
+                    <li>Badge #E-4471: <span class="redacted">NAME REDACTED</span> - Status: <span class="redacted">REDACTED</span></li>
+                    <li>Badge #C-2289: <span class="redacted">NAME REDACTED</span> - Status: Active, monitoring</li>
+                </ul>
+
+                <p>Recommended action: <span class="redacted">REDACTED REDACTED REDACTED implement standard protocol for external exposure scenarios REDACTED REDACTED</span></p>
+
+                <p class="signature">
+                    <span class="redacted">SIGNATURE REDACTED</span><br>
+                    Director, <span class="redacted">REDACTED</span> Division
+                </p>
+            </div>
+        </div>
+
+        <!-- Document: Email Fragment -->
+        <div class="document" id="doc-email">
+            <div class="doc-header">
+                <span class="classification internal">INTERNAL</span>
+                <span class="doc-title">EMAIL THREAD FRAGMENT</span>
+                <span class="doc-date">10/17/2024</span>
+            </div>
+            <div class="doc-content email-thread">
+                <div class="email">
+                    <div class="email-header">
+                        <strong>From:</strong> k.sato@invictus-holdings.internal<br>
+                        <strong>To:</strong> d.harmon@invictus-holdings.internal<br>
+                        <strong>Subject:</strong> RE: RE: Containment options
+                    </div>
+                    <div class="email-body">
+                        <p>I understand the urgency but we need to be careful here. If we move too aggressively, it draws attention. Standard NDAs won't hold if they've already made external copies.</p>
+                        <p>What about the recipient? Have we identified them yet?</p>
+                        <p>- K</p>
+                    </div>
+                </div>
+
+                <div class="email">
+                    <div class="email-header">
+                        <strong>From:</strong> d.harmon@invictus-holdings.internal<br>
+                        <strong>To:</strong> k.sato@invictus-holdings.internal<br>
+                        <strong>Subject:</strong> RE: RE: RE: Containment options
+                    </div>
+                    <div class="email-body">
+                        <p>We're working on it. The email was sent to a personal address - looks like a misdirect. Possibly intentional, possibly not.</p>
+                        <p>Either way, they have the access key now. If they use it, we'll know. Then we can assess.</p>
+                        <p>Thursday is still the deadline. After that, Kessler's team takes over.</p>
+                        <p>- D</p>
+                    </div>
+                </div>
+
+                <div class="thread-note">
+                    [Earlier messages in thread not available]
+                </div>
+            </div>
+        </div>
+
+        <div class="portal-footer">
+            <span class="footer-warning">All access is logged and monitored. Unauthorized disclosure is a violation of your employment agreement.</span>
+        </div>
+
+        {% else %}
+        <!-- ACCESS DENIED STATE -->
+        <div class="access-banner access-denied">
+            <span class="access-icon">&#10007;</span>
+            {{ error_message }}
+        </div>
+
+        <div class="denied-content">
+            <div class="denied-box">
+                <h2>Authentication Failed</h2>
+                {% if error_type == 'invalid' %}
+                <p>The credential you provided is not recognized by this system.</p>
+                <p class="denied-note">If you believe this is an error, contact your system administrator.</p>
+                {% elif error_type == 'exhausted' %}
+                <p>This credential has exceeded its maximum access attempts.</p>
+                <p class="denied-note">For security purposes, credentials are limited-use only.</p>
+                {% endif %}
+
+                <div class="denied-code">
+                    Error Code: AUTH_{{ error_type | upper }}_{{ range(1000, 9999) | random }}
+                </div>
+            </div>
+        </div>
+
+        <div class="portal-footer">
+            <span class="footer-warning">This access attempt has been logged.</span>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

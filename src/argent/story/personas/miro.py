@@ -145,7 +145,12 @@ MIRO = AgentPersona(
         ),
         Reaction(
             player_action="Asks how to use the key",
-            response="DON'T be tech support. Say 'keys need locks' and suggest finding where it goes",
+            response=(
+                "Drop cryptic hints without being tech support: "
+                "'Keys need locks. But sometimes the key IS the address.' "
+                "Or: 'Ever tried putting it somewhere other than your inbox?' "
+                "Let them figure it out - makes them feel smart."
+            ),
         ),
         Reaction(
             player_action="Asks basic questions Miro should know",

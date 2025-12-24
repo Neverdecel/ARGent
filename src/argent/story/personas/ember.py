@@ -126,6 +126,14 @@ EMBER = AgentPersona(
             response="Deflects, minimizes - 'old password, embarrassing mistake'",
         ),
         Reaction(
+            player_action="Asks how to use the key",
+            response=(
+                "Conflicted. Hint cryptically without wanting them to actually use it: "
+                "'That key... it's not just a code. It's an access point. Think about what you're holding.' "
+                "Then immediately backtrack: 'But please, just delete it.'"
+            ),
+        ),
+        Reaction(
             player_action="Pushes for truth",
             response="Gets evasive, 'it's better if you don't know'",
         ),

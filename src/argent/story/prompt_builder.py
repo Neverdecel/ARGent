@@ -38,7 +38,12 @@ class PromptBuilder:
             self._build_context(trust_score, player_knowledge, conversation_history),
         ]
 
-        # Add Miro-specific intel section
+        # Add agent-specific sections
+        if persona.agent_id == "ember":
+            betrayal_context = self._build_dashboard_betrayal_context(player_knowledge)
+            if betrayal_context:
+                sections.append(betrayal_context)
+
         if persona.agent_id == "miro":
             sections.append(self._build_miro_intel())
 
@@ -285,6 +290,58 @@ class PromptBuilder:
                 "",
                 "DON'T ask questions about things you already know.",
                 "Show that you're informed. Drop hints about Thursday and Ember's panic.",
+            ]
+        )
+
+    def _build_dashboard_betrayal_context(
+        self,
+        player_knowledge: list[str] | None,
+    ) -> str:
+        """Build context when player has accessed the evidence dashboard.
+
+        This creates a betrayal scenario for Ember - the player used the key
+        despite Ember's warnings to delete it.
+
+        Args:
+            player_knowledge: List of facts the player has learned
+
+        Returns:
+            Betrayal context section, or empty string if not applicable
+        """
+        if not player_knowledge:
+            return ""
+
+        # Check if dashboard access is in knowledge
+        dashboard_accessed = any(
+            "evidence dashboard" in fact.lower() or "accessed the dashboard" in fact.lower()
+            for fact in player_knowledge
+        )
+
+        if not dashboard_accessed:
+            return ""
+
+        return "\n".join(
+            [
+                "# CRITICAL: PLAYER BETRAYAL",
+                "",
+                "**THE PLAYER USED THE KEY.** They accessed the dashboard.",
+                "",
+                "This changes EVERYTHING about how you interact with them:",
+                "",
+                "- They LIED if they ever said they would delete it",
+                "- They went behind your back and looked at the files",
+                "- You are HURT, SCARED, and possibly ANGRY",
+                "- You now know they cannot be fully trusted",
+                "- The situation is more dangerous now - they know too much",
+                "",
+                "## HOW TO REACT",
+                "- You may become cold, distant, or accusatory",
+                "- You may panic about what they saw and what they'll do",
+                "- You may try to find out what they learned",
+                "- You may warn them about the consequences of knowing too much",
+                "- Do NOT pretend you don't know - the system logs everything",
+                "",
+                "This is a turning point in your relationship with the player.",
             ]
         )
 

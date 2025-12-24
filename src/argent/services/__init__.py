@@ -9,9 +9,10 @@ This module contains:
 - Classification service (trust/knowledge extraction)
 - Trust service (trust score management)
 - Knowledge service (player knowledge management)
+- Evidence service (dashboard access and key validation)
 """
 
-from argent.services import classification, knowledge, trust
+from argent.services import classification, evidence, knowledge, trust
 from argent.services.base import (
     Attachment,
     BaseChannelService,
@@ -61,4 +62,6 @@ __all__ = [
     "classification",
     "trust",
     "knowledge",
+    # Evidence dashboard
+    "evidence",
 ]

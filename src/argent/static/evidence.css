@@ -1,0 +1,335 @@
+/* Evidence Dashboard - Corporate Intranet Aesthetic (90s/2000s) */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, Tahoma, Verdana, sans-serif;
+    font-size: 13px;
+    background-color: #d4d0c8;
+    color: #000000;
+    line-height: 1.4;
+}
+
+/* Corporate Header */
+.corp-header {
+    background: linear-gradient(to bottom, #000080, #000066);
+    color: #ffffff;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #808080;
+}
+
+.corp-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+.logo-icon {
+    font-size: 18px;
+    color: #ffd700;
+}
+
+.corp-nav {
+    font-size: 11px;
+    color: #c0c0c0;
+}
+
+.nav-separator {
+    margin: 0 8px;
+    color: #808080;
+}
+
+/* Main Container */
+.portal-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 0 16px;
+}
+
+/* Access Banners */
+.access-banner {
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-weight: bold;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid;
+}
+
+.access-granted {
+    background-color: #c8e6c9;
+    border-color: #2e7d32;
+    color: #1b5e20;
+}
+
+.access-denied {
+    background-color: #ffcdd2;
+    border-color: #c62828;
+    color: #b71c1c;
+}
+
+.access-icon {
+    font-size: 18px;
+}
+
+/* System Notice */
+.system-notice {
+    background-color: #fffde7;
+    border: 1px solid #f9a825;
+    padding: 8px 12px;
+    margin-bottom: 16px;
+    font-size: 12px;
+}
+
+/* Document Navigation */
+.doc-nav {
+    background-color: #f5f5f5;
+    border: 2px inset #808080;
+    padding: 8px;
+    margin-bottom: 20px;
+}
+
+.doc-nav-header {
+    font-weight: bold;
+    font-size: 11px;
+    color: #333;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.doc-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+}
+
+.doc-list a {
+    color: #0000ff;
+    text-decoration: underline;
+    font-size: 12px;
+}
+
+.doc-list a:hover {
+    color: #ff0000;
+}
+
+/* Documents */
+.document {
+    background-color: #ffffff;
+    border: 2px outset #808080;
+    margin-bottom: 24px;
+}
+
+.doc-header {
+    background: linear-gradient(to bottom, #c0c0c0, #a0a0a0);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #808080;
+}
+
+.doc-title {
+    font-weight: bold;
+    font-size: 12px;
+    flex-grow: 1;
+}
+
+.doc-date {
+    font-size: 11px;
+    color: #444;
+}
+
+/* Classification Stamps */
+.classification {
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border: 1px solid;
+    letter-spacing: 0.5px;
+}
+
+.classification.internal {
+    background-color: #e3f2fd;
+    border-color: #1565c0;
+    color: #0d47a1;
+}
+
+.classification.confidential {
+    background-color: #fff3e0;
+    border-color: #e65100;
+    color: #bf360c;
+}
+
+.classification.executive {
+    background-color: #fce4ec;
+    border-color: #c62828;
+    color: #b71c1c;
+}
+
+/* Document Content */
+.doc-content {
+    padding: 16px;
+    font-size: 13px;
+}
+
+.doc-content p {
+    margin-bottom: 12px;
+}
+
+.doc-content ul {
+    margin: 8px 0 12px 24px;
+}
+
+.doc-content li {
+    margin-bottom: 4px;
+}
+
+.memo-divider {
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 12px 0;
+}
+
+.signature {
+    margin-top: 20px;
+    font-style: italic;
+    color: #333;
+}
+
+/* Log Content */
+.log-content {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    background-color: #1a1a1a;
+    color: #00ff00;
+    padding: 12px;
+    border: 2px inset #808080;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+/* Redaction Styling */
+.redacted-doc .redacted {
+    background-color: #000000;
+    color: #000000;
+    padding: 0 4px;
+    user-select: none;
+}
+
+/* Email Thread */
+.email-thread .email {
+    border: 1px solid #ccc;
+    margin-bottom: 12px;
+    background-color: #fafafa;
+}
+
+.email-header {
+    background-color: #e8e8e8;
+    padding: 8px 12px;
+    font-size: 11px;
+    border-bottom: 1px solid #ccc;
+}
+
+.email-body {
+    padding: 12px;
+}
+
+.email-body p {
+    margin-bottom: 8px;
+}
+
+.thread-note {
+    font-style: italic;
+    color: #666;
+    font-size: 11px;
+    text-align: center;
+    padding: 8px;
+}
+
+/* Portal Footer */
+.portal-footer {
+    margin-top: 24px;
+    padding: 12px;
+    background-color: #f0f0f0;
+    border-top: 2px solid #808080;
+    text-align: center;
+}
+
+.footer-warning {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Access Denied State */
+.denied-content {
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+}
+
+.denied-box {
+    background-color: #ffffff;
+    border: 2px outset #808080;
+    padding: 24px 32px;
+    max-width: 400px;
+    text-align: center;
+}
+
+.denied-box h2 {
+    font-size: 16px;
+    color: #c62828;
+    margin-bottom: 16px;
+}
+
+.denied-box p {
+    margin-bottom: 12px;
+}
+
+.denied-note {
+    font-size: 11px;
+    color: #666;
+}
+
+.denied-code {
+    margin-top: 20px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #999;
+    background-color: #f5f5f5;
+    padding: 8px;
+    border: 1px inset #ccc;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .corp-header {
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+    }
+
+    .doc-header {
+        flex-wrap: wrap;
+    }
+
+    .doc-list {
+        flex-direction: column;
+    }
+}

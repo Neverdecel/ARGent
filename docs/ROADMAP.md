@@ -46,28 +46,31 @@ The current pipeline generates responses but doesn't extract state changes.
 ### 1.2 Evidence Dashboard
 The in-fiction page where players use their key.
 
-- [ ] **Dashboard page**
-  - Create `/evidence` route with key input form
-  - Corporate intranet styling (dated, internal feel)
+- [x] **Dashboard page**
+  - Key-derived URL: `/access/<key>` — the URL IS the key
+  - Corporate intranet styling (90s/2000s feel)
   - Key validation against `player_keys` table
-  - *Files: `src/api/evidence.py` (new), `templates/evidence/`*
+  - Puzzle discovery: agents hint, player figures out URL
+  - *Files: `src/argent/api/evidence.py`, `src/argent/templates/evidence.html`*
 
-- [ ] **Access logging**
+- [x] **Access logging**
   - Log every access attempt (success/failure)
-  - Track access count against limit (3-5 uses)
+  - Track access count against limit (5 uses)
   - Emit `key_used` event for story triggers
-  - *Files: `src/models/player.py`, `src/services/`*
+  - *Files: `src/argent/services/evidence.py`, `src/argent/scheduler/events.py`*
 
-- [ ] **Dashboard content**
-  - 2-3 internal logs/memos
-  - 1 redacted document
-  - 1 email thread fragment
-  - *Files: `templates/evidence/`, static content*
+- [x] **Dashboard content**
+  - Security access log with timestamps
+  - 2 internal memos (Project Threshold)
+  - Redacted incident report
+  - Email thread fragment
+  - *Files: `src/argent/templates/evidence.html`, `src/argent/static/evidence.css`*
 
-- [ ] **Ember visibility**
-  - Ember's prompt includes key access status
-  - Triggers trust break if player lied about not using it
-  - *Files: `src/agents/ember/`*
+- [x] **Ember visibility**
+  - Ember's prompt includes betrayal context when dashboard accessed
+  - Knowledge fact stored: "Player accessed the evidence dashboard"
+  - Agent personas include key hint reactions
+  - *Files: `src/argent/story/prompt_builder.py`, `src/argent/story/personas/`*
 
 ### 1.3 Condition-Based Triggers
 Currently only time-based triggers. Need condition evaluation.

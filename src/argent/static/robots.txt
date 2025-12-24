@@ -1,0 +1,8 @@
+# ARGent - Robots.txt
+# Prevent indexing of evidence dashboard (secret content)
+
+User-agent: *
+Disallow: /access/
+
+# Allow everything else
+Allow: /

@@ -315,3 +315,41 @@ def _get_miro_fallback_message() -> str:
 heard you received something interesting recently. not sure if you know what you're holding, but I might be able to help you figure that out.
 
 no pressure. just thought you should know you have options."""
+
+
+async def handle_key_used(
+    player_id: UUID,
+    context: dict[str, Any],
+) -> None:
+    """Handle player accessing the evidence dashboard.
+
+    This event is triggered when a player successfully accesses the
+    dashboard using their key. The knowledge fact is already stored
+    by the evidence service - this handler is for any additional
+    story triggers.
+
+    Context may contain:
+        - access_count: Current access count
+        - remaining: Remaining accesses
+
+    Future enhancements:
+        - Trigger Ember reaction if trust is high
+        - Notify Miro through their network
+        - Spawn new agents based on exposure
+    """
+    access_count = context.get("access_count", 1)
+
+    logger.info(
+        "Key used event: player=%s access_count=%d",
+        player_id,
+        access_count,
+    )
+
+    # For now, just log the event.
+    # The knowledge fact "Player accessed the evidence dashboard"
+    # is already stored by evidence.record_dashboard_knowledge()
+    # and will appear in Ember's prompt automatically.
+
+    # Future: Could trigger follow-up events here
+    # - If first access: consider scheduling Ember reaction
+    # - If multiple accesses: increase exposure level

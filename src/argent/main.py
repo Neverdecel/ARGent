@@ -5,8 +5,10 @@ import sys
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from argent.api.evidence import router as evidence_router
 from argent.api.health import router as health_router
 from argent.api.inbox import router as inbox_router
 from argent.api.onboarding import router as onboarding_router
@@ -44,9 +46,17 @@ app = FastAPI(
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+# Serve robots.txt at root (for search engine exclusion)
+@app.get("/robots.txt", include_in_schema=False)
+async def robots_txt() -> FileResponse:
+    """Serve robots.txt to prevent indexing of secret pages."""
+    return FileResponse(STATIC_DIR / "robots.txt", media_type="text/plain")
+
+
 # Include routers
 app.include_router(health_router)
 app.include_router(webhooks_router)
 app.include_router(onboarding_router)
 app.include_router(inbox_router)
+app.include_router(evidence_router)  # Evidence dashboard (/access/{key})
 app.include_router(pages_router)  # Pages router last (handles /)

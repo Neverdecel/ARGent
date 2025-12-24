@@ -76,6 +76,15 @@ STORY_EVENTS: dict[str, StoryEvent] = {
         agent_id="miro",
         channel="sms",
     ),
+    "key_used": StoryEvent(
+        event_id="key_used",
+        handler="argent.scheduler.handlers.handle_key_used",
+        trigger=EventTrigger.PLAYER_ACTION,
+        delay=DelayRange.immediate(),
+        description="Player accessed the evidence dashboard",
+        agent_id=None,  # Multiple agents may react
+        channel=None,
+    ),
 }
 
 
