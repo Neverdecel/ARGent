@@ -166,13 +166,16 @@ ARGent is in **active development**. The core gameplay loop is functional.
 - [x] Dynamic prompt building from persona + context
 - [x] Conversation history awareness
 - [x] Trust-level-aware responses
+- [x] Response classification — intent, sentiment, topic extraction per message
 
 **Story Engine**
 - [x] Event scheduler with delayed triggers
 - [x] First contact scheduling (Ember → Miro cascade)
 - [x] Trust score tracking per agent
-- [x] Player knowledge/facts storage
+- [x] Trust extraction from agent responses
+- [x] Player knowledge/facts storage and extraction
 - [x] Story milestone tracking
+- [x] Evidence dashboard — in-fiction corporate intranet accessed via key-derived URL
 
 **Infrastructure**
 - [x] Docker Compose deployment (app, worker, postgres, redis)
@@ -181,10 +184,8 @@ ARGent is in **active development**. The core gameplay loop is functional.
 
 ### In Progress
 
-- [ ] **Trust extraction** — Automatically update trust from agent responses
 - [ ] **Condition-based triggers** — Fire events based on trust thresholds, player actions
 - [ ] **Agent orchestration** — Coordinate timing and awareness between agents
-- [ ] **Evidence dashboard** — In-fiction page players access with their key
 
 ### Planned
 
