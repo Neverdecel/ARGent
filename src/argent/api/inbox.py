@@ -853,7 +853,7 @@ async def _generate_agent_response_background(
 
             # Build agent context
             trust_score = await _get_player_trust_score(db, player_id, agent_id)
-            knowledge = await _get_player_knowledge(db, player_id)
+            player_knowledge_facts = await _get_player_knowledge(db, player_id)
             history = await _get_conversation_history(db, player_id, session_id)
 
             context = AgentContext(
@@ -862,7 +862,7 @@ async def _generate_agent_response_background(
                 player_message=player_message,
                 conversation_history=history,
                 player_trust_score=trust_score,
-                player_knowledge=knowledge,
+                player_knowledge=player_knowledge_facts,
             )
 
             # Generate response
@@ -870,7 +870,7 @@ async def _generate_agent_response_background(
 
             # Store agent response
             inbox_service = _get_web_inbox_service(db)
-            await inbox_service.send_message(
+            outbound_message = await inbox_service.send_and_store(
                 OutboundMessage(
                     player_id=player_id,
                     recipient="",  # Not used for web inbox
@@ -882,13 +882,59 @@ async def _generate_agent_response_background(
                 display_channel="email" if agent_id == "ember" else "sms",
             )
 
+            # Extract trust and knowledge from the exchange
+            from argent.services import classification, trust
+            from argent.services import knowledge as knowledge_service
+
+            extraction = await classification.extract_from_exchange(
+                player_message=player_message,
+                agent_response=response.content,
+                agent_id=agent_id,
+                conversation_context=history,
+            )
+
+            # Update trust score if there was a change
+            if extraction.trust_delta != 0:
+                await trust.update_trust(
+                    db=db,
+                    player_id=player_id,
+                    agent_id=agent_id,
+                    delta=extraction.trust_delta,
+                    reason=extraction.trust_reason,
+                    message_id=outbound_message.id if outbound_message else None,
+                )
+
+            # Store extracted knowledge
+            if extraction.knowledge_items:
+                await knowledge_service.add_knowledge(
+                    db=db,
+                    player_id=player_id,
+                    facts=extraction.knowledge_items,
+                    source_agent=agent_id,
+                    message_id=outbound_message.id if outbound_message else None,
+                )
+
+            # Store classification on the message
+            if outbound_message:
+                outbound_message.classification = {
+                    "trust_delta": extraction.trust_delta,
+                    "trust_reason": extraction.trust_reason,
+                    "knowledge": extraction.knowledge_items,
+                    "player_intent": extraction.player_intent,
+                    "confidence": extraction.confidence,
+                }
+                from datetime import UTC, datetime
+
+                outbound_message.classified_at = datetime.now(UTC)
+
             await db.commit()
 
             logger.info(
-                "Agent %s responded to player %s in session %s",
+                "Agent %s responded to player %s in session %s (trust_delta=%+d)",
                 agent_id,
                 player_id,
                 session_id,
+                extraction.trust_delta,
             )
 
     except Exception as e:

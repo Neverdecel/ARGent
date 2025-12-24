@@ -6,9 +6,12 @@ This module contains:
 - Web inbox service (non-immersive mode)
 - Message dispatcher (routes based on player preference)
 - Verification service (token generation and validation)
-- Memory Bank service (TODO)
+- Classification service (trust/knowledge extraction)
+- Trust service (trust score management)
+- Knowledge service (player knowledge management)
 """
 
+from argent.services import classification, knowledge, trust
 from argent.services.base import (
     Attachment,
     BaseChannelService,
@@ -54,4 +57,8 @@ __all__ = [
     # Verification
     "VerificationService",
     "get_verification_service",
+    # Classification/Extraction
+    "classification",
+    "trust",
+    "knowledge",
 ]

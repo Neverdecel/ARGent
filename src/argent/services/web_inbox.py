@@ -39,14 +39,32 @@ class WebInboxService(BaseChannelService):
     def channel(self) -> Channel:
         return Channel.WEB
 
-    async def send_message(
-        self, message: OutboundMessage, display_channel: str = "email"
-    ) -> SendResult:
+    async def send_message(self, message: OutboundMessage) -> SendResult:
         """Store message in database for web inbox display.
 
         Args:
             message: The message to store
+
+        Returns:
+            SendResult with success status
+        """
+        db_message = await self.send_and_store(message)
+        return SendResult(success=True, external_id=f"web-{db_message.id}")
+
+    async def send_and_store(
+        self, message: OutboundMessage, display_channel: str = "email"
+    ) -> Message:
+        """Store message in database and return the Message record.
+
+        Use this when you need access to the created Message object.
+        For simple sends, use send_message() instead.
+
+        Args:
+            message: The message to store
             display_channel: How to display this message - 'email' or 'sms'
+
+        Returns:
+            The created Message object
         """
         # Generate a unique ID for this message
         message_id = uuid4()
@@ -81,10 +99,7 @@ class WebInboxService(BaseChannelService):
             message.player_id,
         )
 
-        return SendResult(
-            success=True,
-            external_id=f"web-{message_id}",
-        )
+        return db_message
 
     async def store_player_message(
         self,
