@@ -167,6 +167,8 @@ ARGent is in **active development**. The core gameplay loop is functional.
 - [x] Conversation history awareness
 - [x] Trust-level-aware responses
 - [x] Response classification — intent, sentiment, topic extraction per message
+- [x] Betrayal detection — agents react when player uses dashboard
+- [x] Emotional slips — agents accidentally reveal clues under pressure
 
 **Story Engine**
 - [x] Event scheduler with delayed triggers
