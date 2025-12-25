@@ -17,6 +17,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from argent.agents.base import AgentContext, AgentResponse, BaseAgent
+from argent.config import get_settings
 from argent.story import PromptBuilder, load_character
 
 if TYPE_CHECKING:
@@ -126,12 +127,15 @@ class EmberAgent(BaseAgent):
             AgentResponse containing Ember's reply
         """
         # Build the dynamic system prompt with current context
+        settings = get_settings()
         system_prompt = self._prompt_builder.build_system_prompt(
             persona=self._persona,
             trust_score=context.player_trust_score,
             player_knowledge=context.player_knowledge,
             conversation_history=context.conversation_history,
             player_key=player_key,
+            communication_mode=context.communication_mode,
+            base_url=settings.base_url,
         )
 
         # Create a fresh agent with the current system prompt

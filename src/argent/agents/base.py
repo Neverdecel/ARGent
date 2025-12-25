@@ -15,6 +15,7 @@ class AgentContext:
     conversation_history: list[dict] = field(default_factory=list)
     player_trust_score: int = 0
     player_knowledge: list[str] = field(default_factory=list)
+    communication_mode: str = "immersive"  # "immersive" or "web-only"
 
 
 @dataclass

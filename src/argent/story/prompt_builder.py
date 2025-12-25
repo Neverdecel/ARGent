@@ -17,6 +17,8 @@ class PromptBuilder:
         player_knowledge: list[str] | None = None,
         conversation_history: list[dict] | None = None,
         player_key: str | None = None,
+        communication_mode: str = "immersive",
+        base_url: str = "http://localhost:8000",
     ) -> str:
         """Build complete system prompt with dynamic context.
 
@@ -26,6 +28,8 @@ class PromptBuilder:
             player_knowledge: List of facts the player has learned
             conversation_history: Previous messages in this conversation
             player_key: The player's unique key (for betrayal context)
+            communication_mode: "immersive" (real email/SMS) or "web-only"
+            base_url: The application base URL (for portal links)
 
         Returns:
             Complete system prompt for the agent
@@ -39,6 +43,14 @@ class PromptBuilder:
             self._build_reactions(persona),
             self._build_context(trust_score, player_knowledge, conversation_history),
         ]
+
+        # Add portal URL context for moderate+ trust conversations
+        # At trust 20+, agents can give the URL if player engages well
+        if player_key and trust_score >= 20:
+            portal_context = self._build_portal_url_context(
+                player_key, communication_mode, base_url
+            )
+            sections.append(portal_context)
 
         # Add agent-specific sections
         if persona.agent_id == "ember":
@@ -312,19 +324,63 @@ class PromptBuilder:
 
         return "\n".join(lines)
 
+    def _build_portal_url_context(
+        self,
+        player_key: str,
+        communication_mode: str,
+        base_url: str,
+    ) -> str:
+        """Build context about how to tell the player the portal URL.
+
+        Args:
+            player_key: The player's unique key
+            communication_mode: "immersive" or "web-only"
+            base_url: The application base URL
+
+        Returns:
+            Portal URL guidance section
+        """
+        # Build the appropriate URL based on communication mode
+        if communication_mode == "web-only":
+            # Web-only players are already in the browser, just need the path
+            portal_url = f"/access/{player_key}"
+            url_hint = f"'/access/' followed by their key: {portal_url}"
+        else:
+            # Immersive players need the full URL to open in a browser
+            portal_url = f"{base_url}/access/{player_key}"
+            url_hint = f"the full URL: {portal_url}"
+
+        return "\n".join(
+            [
+                "## PORTAL ACCESS INFO (for high trust moments)",
+                "",
+                f"The player's key is: {player_key}",
+                f"The portal URL is: {portal_url}",
+                "",
+                "When trust is high enough and they ask how to use the key:",
+                f"- Tell them to go to {url_hint}",
+                "- This is the evidence dashboard that the key unlocks",
+                "",
+                "Remember:",
+                "- Ember gives this info RELUCTANTLY (begging them not to use it)",
+                "- Miro gives it as valuable intel (they earned it)",
+            ]
+        )
+
     def _build_miro_intel(self) -> str:
         """Build section about what Miro already knows from sources."""
         return "\n".join(
             [
                 "## WHAT YOU ALREADY KNOW (from your network)",
                 "You have sources. You already know:",
-                "- The player received a key via email",
-                "- Ember sent it and is panicked",
-                "- There's a 'Thursday' deadline",
-                "- Something valuable is involved",
+                "- The player received a key via email from someone at Invictus Holdings",
+                "- Ember (an insider) sent it and is panicked about getting caught",
+                "- There's a 'Thursday' deadline - after that, Kessler's team takes over",
+                "- Invictus runs Project Threshold - healthcare denial algorithms",
+                "- The key accesses something damaging to Invictus",
                 "",
                 "DON'T ask questions about things you already know.",
-                "Show that you're informed. Drop hints about Thursday and Ember's panic.",
+                "Show that you're informed. Drop hints about Thursday, Invictus, Threshold.",
             ]
         )
 
@@ -415,15 +471,16 @@ class PromptBuilder:
                 "## WHAT THIS MEANS",
                 "- They LIED if they ever said they would delete it",
                 "- They went behind your back and looked at the files",
+                "- They saw the mortality data. The victim names. YOUR personnel file.",
+                "- They know you are Elena Vasquez. They know you helped BUILD Threshold.",
                 "- You are HURT, SCARED, and possibly ANGRY",
-                "- You now know they cannot be fully trusted",
-                "- The situation is more dangerous now - they know too much",
+                "- The situation is more dangerous now - they know too much about you AND about the deaths",
                 "",
                 "## HOW TO REACT",
                 "- You may become cold, distant, or accusatory",
-                "- You may panic about what they saw and what they'll do",
-                "- You may try to find out what they learned",
-                "- You may warn them about the consequences of knowing too much",
+                "- You may panic about what they saw - the mortality numbers, the victim names",
+                "- You may try to find out if they understand what Threshold really does",
+                "- You may warn them that Invictus monitors everything - they're in danger now too",
                 "- Do NOT pretend you don't know - the system logs everything",
                 "",
                 "## RESPONSE GUIDELINES",
@@ -431,6 +488,7 @@ class PromptBuilder:
                 "- You already KNOW they accessed it. The logs told you. Be direct.",
                 "- Short, panicked fragments. Not long explanations.",
                 "- One focused question per message. Let silence do the work.",
+                "- You might slip and say more now - they already know the worst",
                 "",
                 "This is a turning point in your relationship with the player.",
             ]

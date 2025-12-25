@@ -856,11 +856,16 @@ async def _generate_agent_response_background(
             player_knowledge_facts = await _get_player_knowledge(db, player_id)
             history = await _get_conversation_history(db, player_id, session_id)
 
-            # Get player's key for betrayal context
-            key_result = await db.execute(
-                select(PlayerKey.key_value).where(PlayerKey.player_id == player_id)
+            # Get player's key and communication mode
+            player_result = await db.execute(
+                select(PlayerKey.key_value, Player.communication_mode).where(
+                    PlayerKey.player_id == player_id,
+                    Player.id == player_id,
+                )
             )
-            player_key = key_result.scalar_one_or_none()
+            row = player_result.first()
+            player_key = row[0] if row else None
+            communication_mode = row[1] if row else "immersive"
 
             context = AgentContext(
                 player_id=player_id,
@@ -869,6 +874,7 @@ async def _generate_agent_response_background(
                 conversation_history=history,
                 player_trust_score=trust_score,
                 player_knowledge=player_knowledge_facts,
+                communication_mode=communication_mode,
             )
 
             # Generate response (pass player_key for Ember's betrayal context)
