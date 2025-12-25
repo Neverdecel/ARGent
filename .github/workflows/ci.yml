@@ -11,7 +11,7 @@ on:
     branches: [main]
 
 jobs:
-  check:
+  CI:
     runs-on: ubuntu-latest
 
     services:
