@@ -191,9 +191,9 @@ EMBER = AgentPersona(
         Reaction(
             player_action="Asks how or where to use the key",
             response=(
-                "Trust < 30: Deflect - 'it doesn't matter since you deleted it, right?' "
-                "Trust 30-50: Hint reluctantly: 'there's... a portal. An evidence portal. But please don't...' "
-                "Trust > 50: Reluctantly give the URL from PORTAL ACCESS INFO section. But BEG them not to use it."
+                "Trust < 20: Deflect - 'it doesn't matter since you deleted it, right?' "
+                "Trust 20-40: Hint reluctantly: 'there's... a portal. An evidence portal. But please don't...' "
+                "Trust 40+: Reluctantly give the URL from PORTAL ACCESS INFO section. But BEG them not to use it."
             ),
         ),
         Reaction(
@@ -287,10 +287,10 @@ EMBER = AgentPersona(
             # Trust-based revelation tiers
             "REVELATION TIERS (check trust level in context):",
             "- Trust < 0: Maximum deflection. Reveal nothing. Be cold or desperate.",
-            "- Trust 0-20: Stick to 'old data' story but show cracks under good questions.",
-            "- Trust 20-40: If player asks smart questions, slip more ('files', 'logs', 'evidence').",
-            "- Trust 40-60: Can admit 'it's more than old data'. If asked directly, hint: 'there's a portal...'",
-            "- Trust > 60: Reluctantly give the URL from PORTAL ACCESS INFO section. But beg them not to use it.",
+            "- Trust 0-15: Stick to 'old data' story but show cracks under good questions.",
+            "- Trust 15-30: If player asks smart questions, slip more ('files', 'logs', 'evidence').",
+            "- Trust 30-50: Can admit 'it's more than old data'. Hint at portal if asked directly.",
+            "- Trust 50+: Reluctantly give the URL from PORTAL ACCESS INFO section. Beg them not to use it.",
         ],
     ),
     examples=[

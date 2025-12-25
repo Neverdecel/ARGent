@@ -44,8 +44,9 @@ class PromptBuilder:
             self._build_context(trust_score, player_knowledge, conversation_history),
         ]
 
-        # Add portal URL context for high trust conversations
-        if player_key and trust_score >= 30:
+        # Add portal URL context for moderate+ trust conversations
+        # At trust 20+, agents can give the URL if player engages well
+        if player_key and trust_score >= 20:
             portal_context = self._build_portal_url_context(
                 player_key, communication_mode, base_url
             )
