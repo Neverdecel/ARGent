@@ -17,6 +17,8 @@ class PromptBuilder:
         player_knowledge: list[str] | None = None,
         conversation_history: list[dict] | None = None,
         player_key: str | None = None,
+        communication_mode: str = "immersive",
+        base_url: str = "http://localhost:8000",
     ) -> str:
         """Build complete system prompt with dynamic context.
 
@@ -26,6 +28,8 @@ class PromptBuilder:
             player_knowledge: List of facts the player has learned
             conversation_history: Previous messages in this conversation
             player_key: The player's unique key (for betrayal context)
+            communication_mode: "immersive" (real email/SMS) or "web-only"
+            base_url: The application base URL (for portal links)
 
         Returns:
             Complete system prompt for the agent
@@ -39,6 +43,13 @@ class PromptBuilder:
             self._build_reactions(persona),
             self._build_context(trust_score, player_knowledge, conversation_history),
         ]
+
+        # Add portal URL context for high trust conversations
+        if player_key and trust_score >= 30:
+            portal_context = self._build_portal_url_context(
+                player_key, communication_mode, base_url
+            )
+            sections.append(portal_context)
 
         # Add agent-specific sections
         if persona.agent_id == "ember":
@@ -311,6 +322,49 @@ class PromptBuilder:
         )
 
         return "\n".join(lines)
+
+    def _build_portal_url_context(
+        self,
+        player_key: str,
+        communication_mode: str,
+        base_url: str,
+    ) -> str:
+        """Build context about how to tell the player the portal URL.
+
+        Args:
+            player_key: The player's unique key
+            communication_mode: "immersive" or "web-only"
+            base_url: The application base URL
+
+        Returns:
+            Portal URL guidance section
+        """
+        # Build the appropriate URL based on communication mode
+        if communication_mode == "web-only":
+            # Web-only players are already in the browser, just need the path
+            portal_url = f"/access/{player_key}"
+            url_hint = f"'/access/' followed by their key: {portal_url}"
+        else:
+            # Immersive players need the full URL to open in a browser
+            portal_url = f"{base_url}/access/{player_key}"
+            url_hint = f"the full URL: {portal_url}"
+
+        return "\n".join(
+            [
+                "## PORTAL ACCESS INFO (for high trust moments)",
+                "",
+                f"The player's key is: {player_key}",
+                f"The portal URL is: {portal_url}",
+                "",
+                "When trust is high enough and they ask how to use the key:",
+                f"- Tell them to go to {url_hint}",
+                "- This is the evidence dashboard that the key unlocks",
+                "",
+                "Remember:",
+                "- Ember gives this info RELUCTANTLY (begging them not to use it)",
+                "- Miro gives it as valuable intel (they earned it)",
+            ]
+        )
 
     def _build_miro_intel(self) -> str:
         """Build section about what Miro already knows from sources."""

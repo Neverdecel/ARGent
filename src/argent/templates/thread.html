@@ -117,7 +117,8 @@
                 <!-- Message body -->
                 <div class="compose-body">
                     <textarea id="reply-content" name="content"
-                              placeholder="Write your reply..." rows="6" required></textarea>
+                              placeholder="Write your reply..." rows="6" required
+                              autocomplete="off"></textarea>
 
                     <!-- Quoted message (collapsed by default) -->
                     <div class="quoted-message-container">
@@ -167,6 +168,9 @@ function showReplyForm(button) {
     const content = emailEl.dataset.content;
 
     replyingToMessageId = emailEl.dataset.messageId;
+
+    // Clear the textarea (in case browser restored form data)
+    document.getElementById('reply-content').value = '';
 
     // Update quoted text
     document.getElementById('quote-header').textContent = `On ${date}, ${sender} wrote:`;
