@@ -1244,6 +1244,152 @@ a:hover {
     margin: 0 auto;
 }
 
+/* Typing Indicator */
+.typing-indicator {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    max-width: 80%;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    align-self: flex-start;
+}
+
+.typing-indicator.visible {
+    display: flex;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    animation: typing-bounce 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing-bounce {
+    0%, 80%, 100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+    40% {
+        transform: translateY(-6px);
+        opacity: 1;
+    }
+}
+
+/* Message Animations */
+.sms-bubble.new-message {
+    animation: message-in 0.3s ease-out;
+}
+
+@keyframes message-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* New message glow effect */
+.sms-bubble.new-message.received {
+    animation: message-in 0.3s ease-out, message-glow 0.6s ease-out 0.3s;
+}
+
+@keyframes message-glow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 255, 136, 0);
+    }
+}
+
+/* Smooth scroll behavior for messages container */
+.sms-messages {
+    scroll-behavior: smooth;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 0;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    color: var(--text-muted);
+    position: relative;
+    transition: color 0.2s;
+}
+
+.nav-item.active {
+    color: var(--accent);
+}
+
+.nav-item:hover {
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.nav-separator {
+    color: var(--border);
+    font-size: 1rem;
+}
+
+.nav-label {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.nav-badge {
+    margin-left: 0.5rem;
+    background: var(--accent);
+    color: var(--bg-primary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 8px;
+    min-width: 1.25rem;
+    text-align: center;
+}
+
+/* Adjust page content to not be hidden by bottom nav */
+.inbox-page,
+.text-page,
+.thread-page,
+.sms-page,
+.compose-page,
+.conversation-page {
+    padding-bottom: 4rem;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
     .container {
@@ -1261,5 +1407,238 @@ a:hover {
     .btn {
         width: 100%;
         text-align: center;
+    }
+}
+
+/* Dashboard Page */
+.dashboard-page {
+    padding-top: 1rem;
+    padding-bottom: 5rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.dashboard-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.dashboard-header h1 {
+    color: var(--accent);
+    margin-bottom: 0.25rem;
+}
+
+.dashboard-subtitle {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.dashboard-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.section-title {
+    color: var(--accent);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    font-weight: normal;
+}
+
+/* Trust Cards */
+.trust-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.trust-card {
+    padding: 1rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.agent-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.agent-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.agent-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.agent-name {
+    font-weight: 600;
+}
+
+.interaction-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Trust Meter Bar */
+.trust-meter {
+    padding: 0.5rem 0;
+}
+
+.trust-bar-container {
+    position: relative;
+    height: 8px;
+    background: linear-gradient(to right,
+        var(--error) 0%,
+        var(--error) 50%,
+        var(--success) 50%,
+        var(--success) 100%
+    );
+    border-radius: 4px;
+    opacity: 0.4;
+}
+
+.trust-indicator {
+    position: absolute;
+    top: -4px;
+    width: 4px;
+    height: 16px;
+    background: var(--text-primary);
+    border-radius: 2px;
+    transform: translateX(-50%);
+    box-shadow: 0 0 8px var(--accent);
+}
+
+.trust-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+}
+
+.trust-label-min {
+    color: var(--error);
+}
+
+.trust-label-max {
+    color: var(--success);
+}
+
+.trust-label-current {
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.trust-label-current.positive {
+    color: var(--success);
+}
+
+.trust-label-current.negative {
+    color: var(--error);
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem 0.5rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    text-align: center;
+}
+
+.stat-icon {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    margin-bottom: 0.25rem;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: var(--accent);
+}
+
+.stat-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+/* Knowledge Breakdown */
+.knowledge-breakdown {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.subsection-title {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    font-weight: normal;
+}
+
+.category-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.category-item {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    font-size: 0.75rem;
+}
+
+.category-name {
+    color: var(--text-secondary);
+}
+
+.category-count {
+    color: var(--accent);
+    font-weight: bold;
+}
+
+/* Dashboard Mobile Responsive */
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stats-grid .stat-card:last-child {
+        grid-column: span 2;
+    }
+
+    .stat-value {
+        font-size: 1rem;
     }
 }

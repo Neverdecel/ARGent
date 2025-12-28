@@ -12,7 +12,7 @@
         </div>
     </div>
 
-    <div class="thread-messages">
+    <div class="thread-messages" id="thread-messages">
         {% for msg in messages %}
         <div class="thread-email {% if msg.id == focused_message_id %}expanded{% else %}collapsed{% endif %}"
              data-message-id="{{ msg.id }}"
@@ -79,6 +79,13 @@
             </div>
         </div>
         {% endfor %}
+
+        <!-- Typing indicator for email view -->
+        <div class="typing-indicator" id="typing-indicator" style="margin-top: 8px;">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+        </div>
     </div>
 
     <!-- Reply form - hidden by default, shown when clicking Reply -->
@@ -141,11 +148,26 @@
         </div>
     </div>
 </div>
+
+{% include "partials/bottom_nav.html" %}
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Elements
+const threadMessages = document.getElementById('thread-messages');
+const typingIndicator = document.getElementById('typing-indicator');
 let replyingToMessageId = null;
+
+// Typing indicator controls
+function showTypingIndicator() {
+    typingIndicator.classList.add('visible');
+    typingIndicator.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function hideTypingIndicator() {
+    typingIndicator.classList.remove('visible');
+}
 
 function toggleEmail(header) {
     const email = header.closest('.thread-email');
@@ -256,8 +278,18 @@ document.getElementById('reply-form').addEventListener('submit', async function(
         });
 
         if (response.ok) {
-            // Reload immediately to show user's message
-            window.location.reload();
+            // Hide reply form and show typing indicator
+            hideReplyForm();
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Send';
+
+            // Show typing indicator after a short delay
+            setTimeout(() => {
+                showTypingIndicator();
+            }, 500);
+
+            // Start fast polling for response
+            startFastPolling();
         } else {
             const error = await response.json();
             alert('Failed to send: ' + (error.detail || 'Unknown error'));
@@ -271,21 +303,25 @@ document.getElementById('reply-form').addEventListener('submit', async function(
     }
 });
 
-// Auto-refresh to check for new messages (agent responses)
-let refreshCount = 0;
-const maxRefreshes = 10;
-const initialMessageCount = document.querySelectorAll('.thread-email').length;
+// Polling for new messages
+let pollInterval = null;
+let fastPollCount = 0;
+let messageCount = document.querySelectorAll('.thread-email').length;
+
+function startFastPolling() {
+    fastPollCount = 15;
+    if (pollInterval) {
+        clearInterval(pollInterval);
+    }
+    pollInterval = setInterval(checkForNewMessages, 2000);
+}
 
 function checkForNewMessages() {
-    if (refreshCount >= maxRefreshes) return;
-
     // Don't refresh if user is composing a reply
     if (document.getElementById('reply-section').style.display !== 'none') {
-        setTimeout(checkForNewMessages, 3000);
         return;
     }
 
-    refreshCount++;
     const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_t=' + Date.now();
     fetch(url, {
         headers: { 'Accept': 'text/html' },
@@ -295,22 +331,56 @@ function checkForNewMessages() {
         .then(html => {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
-            const newMessageCount = doc.querySelectorAll('.thread-email').length;
+            const newEmails = doc.querySelectorAll('.thread-email');
 
-            if (newMessageCount > initialMessageCount) {
-                window.location.reload();
-            } else if (refreshCount < maxRefreshes) {
-                setTimeout(checkForNewMessages, 3000);
+            if (newEmails.length > messageCount) {
+                // Hide typing indicator - response arrived
+                hideTypingIndicator();
+
+                // Add new emails dynamically
+                for (let i = messageCount; i < newEmails.length; i++) {
+                    const newEmail = newEmails[i].cloneNode(true);
+                    newEmail.style.animation = 'message-in 0.3s ease-out';
+
+                    // Insert before typing indicator
+                    threadMessages.insertBefore(newEmail, typingIndicator);
+
+                    // Initialize expand icon for new email
+                    const icon = newEmail.querySelector('.email-expand-icon');
+                    if (icon) {
+                        icon.textContent = newEmail.classList.contains('expanded') ? '▲' : '▼';
+                    }
+                }
+                messageCount = newEmails.length;
+
+                // Update thread count in header
+                const countEl = document.querySelector('.thread-count');
+                if (countEl) {
+                    countEl.textContent = `${messageCount} message${messageCount !== 1 ? 's' : ''}`;
+                }
+
+                // Scroll to show new message
+                const lastEmail = threadMessages.querySelector('.thread-email:last-of-type');
+                if (lastEmail) {
+                    lastEmail.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+
+            // Slow down polling after fast period
+            if (fastPollCount > 0) {
+                fastPollCount--;
+            } else if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = setInterval(checkForNewMessages, 10000);
             }
         })
         .catch(() => {
-            if (refreshCount < maxRefreshes) {
-                setTimeout(checkForNewMessages, 3000);
-            }
+            // Ignore errors, keep polling
         });
 }
 
-setTimeout(checkForNewMessages, 3000);
+// Start slow background polling
+pollInterval = setInterval(checkForNewMessages, 10000);
 
 // Initialize expand icons
 document.querySelectorAll('.thread-email').forEach(email => {

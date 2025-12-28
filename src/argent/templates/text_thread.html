@@ -18,6 +18,13 @@
             <div class="bubble-time">{{ msg.created_at.strftime('%I:%M %p') }}</div>
         </div>
         {% endfor %}
+
+        <!-- Typing indicator -->
+        <div class="typing-indicator" id="typing-indicator">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+        </div>
     </div>
 
     <div class="sms-input-area">
@@ -29,6 +36,8 @@
         </form>
     </div>
 </div>
+
+{% include "partials/bottom_nav.html" %}
 
 <style>
 .sms-page {
@@ -159,15 +168,25 @@
 
 {% block scripts %}
 <script>
-// Scroll to bottom on load
+// Elements
 const smsMessages = document.getElementById('sms-messages');
+const typingIndicator = document.getElementById('typing-indicator');
+
+// Scroll to bottom on load
 smsMessages.scrollTop = smsMessages.scrollHeight;
 
-// Track message IDs we've seen to detect new ones
-let seenMessageIds = new Set();
-document.querySelectorAll('.sms-bubble').forEach((bubble, i) => {
-    seenMessageIds.add(i);
-});
+// Track message count to detect new ones
+let messageCount = document.querySelectorAll('.sms-bubble').length;
+
+// Typing indicator controls
+function showTypingIndicator() {
+    typingIndicator.classList.add('visible');
+    smsMessages.scrollTop = smsMessages.scrollHeight;
+}
+
+function hideTypingIndicator() {
+    typingIndicator.classList.remove('visible');
+}
 
 // Form submission
 document.getElementById('sms-form').addEventListener('submit', async function(e) {
@@ -183,14 +202,15 @@ document.getElementById('sms-form').addEventListener('submit', async function(e)
     sendBtn.disabled = true;
     input.disabled = true;
 
-    // Optimistically add message
+    // Optimistically add message with animation
     const bubble = document.createElement('div');
-    bubble.className = 'sms-bubble sent';
+    bubble.className = 'sms-bubble sent new-message';
     bubble.innerHTML = `
         <div class="bubble-content">${content.replace(/\n/g, '<br>')}</div>
         <div class="bubble-time">sending...</div>
     `;
-    smsMessages.appendChild(bubble);
+    // Insert before typing indicator
+    smsMessages.insertBefore(bubble, typingIndicator);
     smsMessages.scrollTop = smsMessages.scrollHeight;
 
     input.value = '';
@@ -210,6 +230,13 @@ document.getElementById('sms-form').addEventListener('submit', async function(e)
                 hour: 'numeric',
                 minute: '2-digit'
             });
+            messageCount++;
+
+            // Show typing indicator after a short delay (feels more natural)
+            setTimeout(() => {
+                showTypingIndicator();
+            }, 500);
+
             // Start faster polling after sending
             startFastPolling();
         } else {
@@ -220,6 +247,9 @@ document.getElementById('sms-form').addEventListener('submit', async function(e)
         bubble.querySelector('.bubble-time').textContent = 'failed';
         bubble.style.opacity = '0.5';
     }
+
+    // Remove animation class after it completes
+    setTimeout(() => bubble.classList.remove('new-message'), 300);
 
     sendBtn.disabled = false;
     input.disabled = false;
@@ -233,9 +263,10 @@ let fastPollCount = 0;
 function startFastPolling() {
     // Poll frequently for 30 seconds after sending a message
     fastPollCount = 15;
-    if (!pollInterval) {
-        pollInterval = setInterval(checkForNewMessages, 2000);
+    if (pollInterval) {
+        clearInterval(pollInterval);
     }
+    pollInterval = setInterval(checkForNewMessages, 2000);
 }
 
 function checkForNewMessages() {
@@ -247,15 +278,23 @@ function checkForNewMessages() {
             const doc = parser.parseFromString(html, 'text/html');
             const newBubbles = doc.querySelectorAll('.sms-bubble');
 
-            // Check if there are new messages
-            if (newBubbles.length > seenMessageIds.size) {
-                // Add new messages dynamically
-                const currentBubbles = smsMessages.querySelectorAll('.sms-bubble');
-                for (let i = currentBubbles.length; i < newBubbles.length; i++) {
+            // Check if there are new messages from the server
+            if (newBubbles.length > messageCount) {
+                // Hide typing indicator - response arrived
+                hideTypingIndicator();
+
+                // Add new messages dynamically with animation
+                for (let i = messageCount; i < newBubbles.length; i++) {
                     const newBubble = newBubbles[i].cloneNode(true);
-                    smsMessages.appendChild(newBubble);
-                    seenMessageIds.add(i);
+                    newBubble.classList.add('new-message');
+
+                    // Insert before typing indicator
+                    smsMessages.insertBefore(newBubble, typingIndicator);
+
+                    // Remove animation class after it completes
+                    setTimeout(() => newBubble.classList.remove('new-message'), 300);
                 }
+                messageCount = newBubbles.length;
                 smsMessages.scrollTop = smsMessages.scrollHeight;
             }
 
