@@ -113,8 +113,8 @@ async def _get_trust_stats(db: AsyncSession, player_id: UUID) -> list[AgentTrust
 async def _get_game_progress(db: AsyncSession, player_id: UUID) -> GameProgress:
     """Get game progress statistics."""
     # Get player for game_started_at
-    result = await db.execute(select(Player).where(Player.id == player_id))
-    player = result.scalar_one_or_none()
+    player_result = await db.execute(select(Player).where(Player.id == player_id))
+    player = player_result.scalar_one_or_none()
 
     # Calculate time played
     game_started_at = player.game_started_at if player else None
@@ -125,18 +125,20 @@ async def _get_game_progress(db: AsyncSession, player_id: UUID) -> GameProgress:
         time_played_display = "Not started"
 
     # Count milestones
-    result = await db.execute(select(func.count()).where(StoryMilestone.player_id == player_id))
-    milestone_count = result.scalar() or 0
+    milestone_result = await db.execute(
+        select(func.count()).where(StoryMilestone.player_id == player_id)
+    )
+    milestone_count = milestone_result.scalar() or 0
 
     # Count knowledge by category
-    result = await db.execute(
+    knowledge_result = await db.execute(
         select(PlayerKnowledge.category, func.count())
         .where(PlayerKnowledge.player_id == player_id)
         .group_by(PlayerKnowledge.category)
     )
-    knowledge_by_category = {}
+    knowledge_by_category: dict[str, int] = {}
     total_knowledge = 0
-    for category, count in result.all():
+    for category, count in knowledge_result.all():
         cat_name = category or "general"
         knowledge_by_category[cat_name] = count
         total_knowledge += count
