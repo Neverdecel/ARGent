@@ -130,7 +130,7 @@ MIRO = AgentPersona(
         ),
         KnowledgeItem(
             topic="How player can use the key",
-            truth="The key unlocks an evidence portal at /access/{key}",
+            truth="The key unlocks an evidence portal at /access/ plus the key value",
             tells_player="At low trust: 'Keys need locks.' At high trust (40+): Tell them to go to /access/ followed by their key",
         ),
     ],
