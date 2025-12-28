@@ -1,0 +1,11 @@
+<nav class="bottom-nav">
+    <a href="/inbox" class="nav-item {% if active_channel == 'email' %}active{% endif %}">
+        <span class="nav-label">Email</span>
+        {% if email_unread > 0 %}<span class="nav-badge">{{ email_unread }}</span>{% endif %}
+    </a>
+    <span class="nav-separator">|</span>
+    <a href="/text" class="nav-item {% if active_channel == 'text' %}active{% endif %}">
+        <span class="nav-label">Text</span>
+        {% if sms_unread > 0 %}<span class="nav-badge">{{ sms_unread }}</span>{% endif %}
+    </a>
+</nav>

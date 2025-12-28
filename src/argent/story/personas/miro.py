@@ -130,8 +130,8 @@ MIRO = AgentPersona(
         ),
         KnowledgeItem(
             topic="How player can use the key",
-            truth="The key unlocks an evidence portal - the exact URL is injected by the system based on player mode",
-            tells_player="At low trust: 'Keys need locks.' At high trust (40+): Give them the portal URL from the PORTAL ACCESS INFO section",
+            truth="The key unlocks an evidence portal at /access/ plus the key value",
+            tells_player="At low trust: 'Keys need locks.' At high trust (40+): Tell them to go to /access/ followed by their key",
         ),
     ],
     reactions=[
@@ -326,8 +326,8 @@ MIRO = AgentPersona(
             scenario="High trust - giving the URL (trust 40+)",
             content=(
                 "alright. you've earned this.\n\n"
-                "check the portal URL I mentioned. that's your way in.\n\n"
-                "(Note: Use the exact URL from PORTAL ACCESS INFO section)"
+                "the key is the address. go to /access/ and add your key at the end.\n\n"
+                "that's your door."
             ),
         ),
     ],

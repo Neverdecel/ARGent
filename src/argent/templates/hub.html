@@ -1,125 +1,102 @@
 {% extends "base.html" %}
 
-{% block title %}ARGent{% endblock %}
+{% block title %}Dashboard - ARGent{% endblock %}
 
 {% block content %}
-<div class="hub-page">
-    <div class="hub-header">
-        <h1>ARGent</h1>
-        <p class="hub-subtitle">Choose your channel</p>
+<div class="dashboard-page">
+    <div class="dashboard-header">
+        <h1>[ STATUS ]</h1>
+        <p class="dashboard-subtitle">System monitoring active</p>
     </div>
 
-    <div class="channel-list">
-        <a href="/inbox" class="channel-item {% if email_unread > 0 %}unread{% endif %}">
-            <div class="channel-icon">[email]</div>
-            <div class="channel-info">
-                <div class="channel-header-row">
-                    <span class="channel-name">Email</span>
-                    {% if email_unread > 0 %}
-                    <span class="channel-badge">{{ email_unread }} new</span>
-                    {% endif %}
+    <!-- Trust Meters Section -->
+    <section class="dashboard-section">
+        <h2 class="section-title">> Agent Trust Levels</h2>
+        <div class="trust-grid">
+            {% for agent in stats.trust_stats %}
+            <div class="trust-card">
+                <div class="agent-header">
+                    <div class="agent-avatar-placeholder">{{ agent.display_name[0] }}</div>
+                    <div class="agent-info">
+                        <span class="agent-name">{{ agent.display_name }}</span>
+                        <span class="interaction-count">{{ agent.interaction_count }} interactions</span>
+                    </div>
+                </div>
+                <div class="trust-meter">
+                    <div class="trust-bar-container">
+                        <div class="trust-indicator" style="left: {{ ((agent.trust_score + 100) / 200 * 100) | round }}%"></div>
+                    </div>
+                    <div class="trust-labels">
+                        <span class="trust-label-min">-100</span>
+                        <span class="trust-label-current {% if agent.trust_score >= 0 %}positive{% else %}negative{% endif %}">
+                            {% if agent.trust_score >= 0 %}+{% endif %}{{ agent.trust_score }}
+                        </span>
+                        <span class="trust-label-max">+100</span>
+                    </div>
                 </div>
             </div>
-        </a>
+            {% endfor %}
+        </div>
+    </section>
 
-        <a href="/text" class="channel-item {% if sms_unread > 0 %}unread{% endif %}">
-            <div class="channel-icon">[sms]</div>
-            <div class="channel-info">
-                <div class="channel-header-row">
-                    <span class="channel-name">Text</span>
-                    {% if sms_unread > 0 %}
-                    <span class="channel-badge">{{ sms_unread }} new</span>
-                    {% endif %}
-                </div>
+    <!-- Game Progress Section -->
+    <section class="dashboard-section">
+        <h2 class="section-title">> Mission Progress</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-icon">[TIME]</span>
+                <span class="stat-value">{{ stats.game_progress.time_played_display }}</span>
+                <span class="stat-label">Time Active</span>
             </div>
-        </a>
-    </div>
+            <div class="stat-card">
+                <span class="stat-icon">[MILE]</span>
+                <span class="stat-value">{{ stats.game_progress.milestone_count }}</span>
+                <span class="stat-label">Milestones</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">[INTEL]</span>
+                <span class="stat-value">{{ stats.game_progress.knowledge_count }}</span>
+                <span class="stat-label">Intel Gathered</span>
+            </div>
+        </div>
+
+        {% if stats.game_progress.knowledge_by_category %}
+        <div class="knowledge-breakdown">
+            <h3 class="subsection-title">Intel by Category:</h3>
+            <div class="category-list">
+                {% for category, count in stats.game_progress.knowledge_by_category.items() %}
+                <div class="category-item">
+                    <span class="category-name">{{ category }}</span>
+                    <span class="category-count">{{ count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Activity Summary Section -->
+    <section class="dashboard-section">
+        <h2 class="section-title">> Communication Log</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-icon">[OUT]</span>
+                <span class="stat-value">{{ stats.activity.total_messages_sent }}</span>
+                <span class="stat-label">Messages Sent</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">[IN]</span>
+                <span class="stat-value">{{ stats.activity.total_messages_received }}</span>
+                <span class="stat-label">Messages Received</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">[THR]</span>
+                <span class="stat-value">{{ stats.activity.conversation_count }}</span>
+                <span class="stat-label">Conversations</span>
+            </div>
+        </div>
+    </section>
 </div>
 
-<style>
-.hub-page {
-    padding-top: 4rem;
-    max-width: 500px;
-    margin: 0 auto;
-}
-
-.hub-header {
-    margin-bottom: 3rem;
-}
-
-.hub-header h1 {
-    margin-bottom: 0.5rem;
-}
-
-.hub-subtitle {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    margin: 0;
-}
-
-.channel-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.channel-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.25rem 1rem;
-    border-bottom: 1px solid var(--border);
-    text-decoration: none;
-    color: var(--text-primary);
-    transition: background 0.15s;
-}
-
-.channel-item:hover {
-    background-color: var(--bg-secondary);
-    margin: 0 -1rem;
-    padding: 1.25rem 2rem;
-    text-decoration: none;
-}
-
-.channel-item.unread {
-    background-color: rgba(0, 255, 136, 0.03);
-    margin: 0 -1rem;
-    padding: 1.25rem 2rem;
-    border-left: 3px solid var(--accent);
-}
-
-.channel-icon {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    min-width: 50px;
-}
-
-.channel-item.unread .channel-icon {
-    color: var(--accent);
-}
-
-.channel-info {
-    flex: 1;
-}
-
-.channel-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.25rem;
-}
-
-.channel-name {
-    font-weight: 600;
-    font-size: 1rem;
-}
-
-.channel-item.unread .channel-name {
-    color: var(--accent);
-}
-
-.channel-badge {
-    font-size: 0.75rem;
-    color: var(--accent);
-}
-</style>
+{% include "partials/bottom_nav.html" %}
 {% endblock %}

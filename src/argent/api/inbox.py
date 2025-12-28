@@ -142,6 +142,14 @@ def _get_web_inbox_service(db: AsyncSession) -> WebInboxService:
     return WebInboxService(db)
 
 
+async def _get_nav_context(db: AsyncSession, player_id: UUID) -> dict:
+    """Get common navigation context for all inbox pages."""
+    inbox_service = _get_web_inbox_service(db)
+    email_unread = await inbox_service.get_unread_count(player_id, channel_filter="email")
+    sms_unread = await inbox_service.get_unread_count(player_id, channel_filter="sms")
+    return {"email_unread": email_unread, "sms_unread": sms_unread}
+
+
 def _get_agent_avatar_url(agent_id: str | None) -> str | None:
     """Get the avatar URL for an agent."""
     if not agent_id:
@@ -275,7 +283,7 @@ async def hub_page(
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> Response:
-    """Hub page - choose between email and text channels."""
+    """Hub page - player statistics dashboard."""
     if not settings.web_inbox_enabled:
         raise HTTPException(status_code=404, detail="Web inbox not enabled")
 
@@ -286,18 +294,22 @@ async def hub_page(
     if player.communication_mode != "web_only":
         return RedirectResponse(url="/start", status_code=status.HTTP_303_SEE_OTHER)
 
-    # Get unread counts for each channel
-    inbox_service = _get_web_inbox_service(db)
-    email_unread = await inbox_service.get_unread_count(player.id, channel_filter="email")
-    sms_unread = await inbox_service.get_unread_count(player.id, channel_filter="sms")
+    # Get dashboard statistics
+    from argent.services.dashboard import get_dashboard_stats
+
+    stats = await get_dashboard_stats(db, player.id)
+
+    # Get nav context for bottom navigation
+    nav_context = await _get_nav_context(db, player.id)
 
     return templates.TemplateResponse(
         "hub.html",
         {
             "request": request,
             "player": player,
-            "email_unread": email_unread,
-            "sms_unread": sms_unread,
+            "stats": stats,
+            "active_channel": "hub",
+            **nav_context,
         },
     )
 
@@ -329,6 +341,9 @@ async def inbox_page(
     messages = await inbox_service.get_messages(player.id, channel_filter="email", limit=50)
     unread_count = await inbox_service.get_unread_count(player.id, channel_filter="email")
 
+    # Get nav context for bottom navigation
+    nav_context = await _get_nav_context(db, player.id)
+
     # Add avatar URLs to messages
     messages_with_avatars = [
         {
@@ -353,6 +368,8 @@ async def inbox_page(
             "messages": messages_with_avatars,
             "unread_count": unread_count,
             "player": player,
+            "active_channel": "email",
+            **nav_context,
         },
     )
 
@@ -379,6 +396,9 @@ async def text_page(
     inbox_service = _get_web_inbox_service(db)
     conversations = await inbox_service.get_conversations(player.id, channel_filter="sms")
 
+    # Get nav context for bottom navigation
+    nav_context = await _get_nav_context(db, player.id)
+
     # Add avatar URLs to conversations
     conversations_with_avatars = []
     for conv in conversations:
@@ -402,6 +422,8 @@ async def text_page(
             "request": request,
             "conversations": conversations_with_avatars,
             "player": player,
+            "active_channel": "text",
+            **nav_context,
         },
     )
 
@@ -443,6 +465,9 @@ async def text_thread_page(
     agent_id = next((m.agent_id for m in messages if m.agent_id), None)
     avatar_url = _get_agent_avatar_url(agent_id)
 
+    # Get nav context for bottom navigation
+    nav_context = await _get_nav_context(db, player.id)
+
     # Messages in chronological order (oldest first for chat view)
     messages_data = [
         {
@@ -464,6 +489,8 @@ async def text_thread_page(
             "messages": messages_data,
             "player": player,
             "avatar_url": avatar_url,
+            "active_channel": "text",
+            **nav_context,
         },
     )
 
@@ -517,6 +544,9 @@ async def conversation_page(
     participants = {m.sender_name for m in messages if m.sender_name and m.sender_name != "You"}
     title = ", ".join(sorted(participants)) if participants else "Conversation"
 
+    # Get nav context for bottom navigation
+    nav_context = await _get_nav_context(db, player.id)
+
     # Add avatar URLs to messages
     messages_with_avatars = [
         {
@@ -543,6 +573,8 @@ async def conversation_page(
             "title": title,
             "messages": messages_with_avatars,
             "player": player,
+            "active_channel": "email",
+            **nav_context,
         },
     )
 
@@ -576,12 +608,17 @@ async def compose_page(
     # Get available contacts (agents player can email)
     contacts = _get_available_contacts()
 
+    # Get nav context for bottom navigation
+    nav_context = await _get_nav_context(db, player.id)
+
     return templates.TemplateResponse(
         "compose.html",
         {
             "request": request,
             "player": player,
             "contacts": contacts,
+            "active_channel": "email",
+            **nav_context,
         },
     )
 
@@ -634,6 +671,9 @@ async def thread_page(
     participants = {m.sender_name for m in messages if m.sender_name and m.sender_name != "You"}
     title = ", ".join(sorted(participants)) if participants else "Conversation"
 
+    # Get nav context for bottom navigation
+    nav_context = await _get_nav_context(db, player.id)
+
     # Add avatar URLs and mark which message is focused
     # Reverse order: newest messages first
     messages_with_avatars = [
@@ -663,6 +703,8 @@ async def thread_page(
             "messages": messages_with_avatars,
             "focused_message_id": message_id,
             "player": player,
+            "active_channel": "email",
+            **nav_context,
         },
     )
 

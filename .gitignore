@@ -70,3 +70,6 @@ logs/
 *~
 \#*\#
 .#*
+
+# Playwright MCP screenshots
+.playwright-mcp/
