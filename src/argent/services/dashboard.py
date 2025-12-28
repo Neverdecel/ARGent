@@ -92,9 +92,7 @@ def _format_duration(seconds: int) -> str:
 
 async def _get_trust_stats(db: AsyncSession, player_id: UUID) -> list[AgentTrustStats]:
     """Get trust statistics for all agents."""
-    result = await db.execute(
-        select(PlayerTrust).where(PlayerTrust.player_id == player_id)
-    )
+    result = await db.execute(select(PlayerTrust).where(PlayerTrust.player_id == player_id))
     trust_records = {t.agent_id: t for t in result.scalars().all()}
 
     stats = []
@@ -127,9 +125,7 @@ async def _get_game_progress(db: AsyncSession, player_id: UUID) -> GameProgress:
         time_played_display = "Not started"
 
     # Count milestones
-    result = await db.execute(
-        select(func.count()).where(StoryMilestone.player_id == player_id)
-    )
+    result = await db.execute(select(func.count()).where(StoryMilestone.player_id == player_id))
     milestone_count = result.scalar() or 0
 
     # Count knowledge by category
