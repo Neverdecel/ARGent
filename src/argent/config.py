@@ -36,7 +36,9 @@ class Settings(BaseSettings):
 
     # Email (Resend)
     resend_api_key: str = ""
-    email_from: str = "onboarding@resend.dev"  # Use verified domain in prod: noreply@argent.neverdecel.com
+    email_from: str = (
+        "onboarding@resend.dev"  # Use verified domain in prod: noreply@argent.neverdecel.com
+    )
     email_enabled: bool = True
 
     # SMS (Twilio)
