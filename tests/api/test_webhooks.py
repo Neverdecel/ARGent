@@ -5,47 +5,15 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from argent.api.webhooks import get_email_service, get_sms_service
+from argent.api.webhooks import get_sms_service
 from argent.config import get_settings
 from argent.database import get_db
 from argent.main import app
 from argent.services import Channel, InboundMessage
 
 
-class TestMailgunWebhook:
-    """Tests for Mailgun inbound webhook endpoint."""
-
-    @pytest.fixture
-    def mock_db(self):
-        """Mock database session that returns no player."""
-        mock_session = AsyncMock()
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = None
-        mock_session.execute.return_value = mock_result
-        return mock_session
-
-    @pytest.fixture
-    def mock_email_service_valid_sig(self):
-        """Mock email service that accepts any signature."""
-        service = MagicMock()
-        service.verify_webhook_payload.return_value = True
-        service.parse_webhook = AsyncMock(
-            return_value=InboundMessage(
-                external_id="<test@example.com>",
-                channel=Channel.EMAIL,
-                sender_identifier="unknown@example.com",
-                content="Hello",
-                subject="Test",
-            )
-        )
-        return service
-
-    @pytest.fixture
-    def mock_email_service_invalid_sig(self):
-        """Mock email service that rejects signature."""
-        service = MagicMock()
-        service.verify_webhook_payload.return_value = False
-        return service
+class TestEmailWebhook:
+    """Tests for email inbound webhook endpoint (web-only mode)."""
 
     @pytest.fixture
     def mock_settings_email_enabled(self):
@@ -62,12 +30,8 @@ class TestMailgunWebhook:
         return settings
 
     @pytest.mark.asyncio
-    async def test_mailgun_webhook_invalid_signature(
-        self, mock_db, mock_email_service_invalid_sig, mock_settings_email_enabled
-    ):
-        """Test rejection of invalid Mailgun signature."""
-        app.dependency_overrides[get_db] = lambda: mock_db
-        app.dependency_overrides[get_email_service] = lambda: mock_email_service_invalid_sig
+    async def test_email_webhook_returns_web_only_mode(self, mock_settings_email_enabled):
+        """Test that email webhook returns web_only_mode status."""
         app.dependency_overrides[get_settings] = lambda: mock_settings_email_enabled
 
         try:
@@ -76,54 +40,19 @@ class TestMailgunWebhook:
                 base_url="http://test",
             ) as client:
                 response = await client.post(
-                    "/webhook/mailgun",
-                    data={
-                        "sender": "player@example.com",
-                        "body-plain": "Hello",
-                        "timestamp": "1234567890",
-                        "token": "test-token",
-                        "signature": "invalid-signature",
-                    },
-                )
-                assert response.status_code == 401
-        finally:
-            app.dependency_overrides.clear()
-
-    @pytest.mark.asyncio
-    async def test_mailgun_webhook_unknown_sender(
-        self, mock_db, mock_email_service_valid_sig, mock_settings_email_enabled
-    ):
-        """Test handling of email from unknown sender."""
-        app.dependency_overrides[get_db] = lambda: mock_db
-        app.dependency_overrides[get_email_service] = lambda: mock_email_service_valid_sig
-        app.dependency_overrides[get_settings] = lambda: mock_settings_email_enabled
-
-        try:
-            async with AsyncClient(
-                transport=ASGITransport(app=app),
-                base_url="http://test",
-            ) as client:
-                response = await client.post(
-                    "/webhook/mailgun",
-                    data={
-                        "sender": "unknown@example.com",
-                        "body-plain": "Hello",
-                        "timestamp": "123",
-                        "token": "abc",
-                        "signature": "xyz",
-                    },
+                    "/webhook/email",
+                    json={"email_id": "test123"},
                 )
 
-                # Should return 200 to prevent retries
                 assert response.status_code == 200
                 data = response.json()
                 assert data["status"] == "ignored"
-                assert data["reason"] == "unknown_sender"
+                assert data["reason"] == "web_only_mode"
         finally:
             app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
-    async def test_mailgun_webhook_disabled(self, mock_settings_email_disabled):
+    async def test_email_webhook_disabled(self, mock_settings_email_disabled):
         """Test that disabled email service returns disabled status."""
         app.dependency_overrides[get_settings] = lambda: mock_settings_email_disabled
 
@@ -133,14 +62,8 @@ class TestMailgunWebhook:
                 base_url="http://test",
             ) as client:
                 response = await client.post(
-                    "/webhook/mailgun",
-                    data={
-                        "sender": "player@example.com",
-                        "body-plain": "Hello",
-                        "timestamp": "123",
-                        "token": "abc",
-                        "signature": "xyz",
-                    },
+                    "/webhook/email",
+                    json={},
                 )
 
                 assert response.status_code == 200
