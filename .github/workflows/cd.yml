@@ -43,10 +43,11 @@ jobs:
       - name: Generate tags
         id: tags
         run: |
+          IMAGE_NAME=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
           SHA_SHORT=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
           TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
-          MAIN_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${TIMESTAMP}-${SHA_SHORT}"
-          LATEST_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          MAIN_TAG="${{ env.REGISTRY }}/${IMAGE_NAME}:main-${TIMESTAMP}-${SHA_SHORT}"
+          LATEST_TAG="${{ env.REGISTRY }}/${IMAGE_NAME}:latest"
           echo "tags=${MAIN_TAG},${LATEST_TAG}" >> $GITHUB_OUTPUT
 
       - name: Build and push
