@@ -21,9 +21,9 @@
         </div>
     </div>
 
-    <h1>Verification Required</h1>
+    <h1>Check your email</h1>
 
-    <p class="subtitle">Complete both verifications to proceed.</p>
+    <p class="subtitle">We sent a verification link to <strong>{{ email }}</strong></p>
 
     <div class="verification-status">
         <div class="status-item {% if email_verified %}verified{% else %}pending{% endif %}">
@@ -35,33 +35,10 @@
                 {% endif %}
             </div>
             <div class="status-info">
-                <h3>Email</h3>
-                <p class="email-display">{{ email }}</p>
                 {% if email_verified %}
-                <p class="status-text verified">Verified</p>
+                <p class="status-text verified">Email verified</p>
                 {% else %}
-                <p class="status-text pending">Check your inbox and click the verification link</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="status-item {% if phone_verified %}verified{% else %}pending{% endif %}">
-            <div class="status-icon">
-                {% if phone_verified %}
-                <span class="checkmark">&#10003;</span>
-                {% else %}
-                <span class="pending-icon">&#9679;</span>
-                {% endif %}
-            </div>
-            <div class="status-info">
-                <h3>Phone</h3>
-                <p class="phone-display">{{ phone }}</p>
-                {% if phone_verified %}
-                <p class="status-text verified">Verified</p>
-                {% else %}
-                <p class="status-text pending">
-                    <a href="/verify/phone">Enter your verification code &rarr;</a>
-                </p>
+                <p class="status-text pending">Click the link in your email to continue</p>
                 {% endif %}
             </div>
         </div>
@@ -69,13 +46,11 @@
 
     {% if can_start_game %}
     <div class="ready-section">
-        <p class="ready-text">All verifications complete.</p>
         <a href="/start" class="btn btn-primary">Continue &rarr;</a>
     </div>
     {% else %}
     <div class="waiting-section">
-        <p>Waiting for verifications to complete...</p>
-        <button onclick="location.reload()" class="btn btn-secondary">Refresh Status</button>
+        <button onclick="location.reload()" class="btn btn-secondary">I've clicked the link</button>
     </div>
     {% endif %}
 </div>

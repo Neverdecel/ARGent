@@ -1,7 +1,5 @@
-"""Email service using Mailgun API."""
+"""Email service using Resend API."""
 
-import hashlib
-import hmac
 import logging
 import re
 from datetime import UTC, datetime
@@ -24,9 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 class EmailService(BaseChannelService):
-    """Mailgun-based email service for Ember agent."""
+    """Resend-based email service."""
 
-    MAILGUN_API_BASE = "https://api.mailgun.net/v3"
+    RESEND_API_BASE = "https://api.resend.com"
 
     def __init__(self) -> None:
         self._settings = get_settings()
@@ -36,29 +34,27 @@ class EmailService(BaseChannelService):
     def channel(self) -> Channel:
         return Channel.EMAIL
 
-    @property
-    def _api_url(self) -> str:
-        return f"{self.MAILGUN_API_BASE}/{self._settings.mailgun_domain}"
-
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client with auth."""
         if self._client is None:
             self._client = httpx.AsyncClient(
-                auth=("api", self._settings.mailgun_api_key),
+                headers={
+                    "Authorization": f"Bearer {self._settings.resend_api_key}",
+                    "Content-Type": "application/json",
+                },
                 timeout=30.0,
             )
         return self._client
 
     async def send_message(self, message: OutboundMessage) -> SendResult:
-        """Send email via Mailgun API."""
+        """Send email via Resend API."""
         if not self._settings.email_enabled:
             logger.info("Email disabled, skipping send to %s", message.recipient)
             return SendResult(success=True, external_id="disabled")
 
-        # Build email data
         data: dict[str, Any] = {
             "from": self._settings.email_from,
-            "to": message.recipient,
+            "to": [message.recipient],
             "text": message.content,
         }
 
@@ -68,10 +64,11 @@ class EmailService(BaseChannelService):
         if message.html_content:
             data["html"] = message.html_content
 
-        # Add threading headers if replying
         if message.reply_to_external_id:
-            data["h:In-Reply-To"] = message.reply_to_external_id
-            data["h:References"] = message.reply_to_external_id
+            data["headers"] = {
+                "In-Reply-To": message.reply_to_external_id,
+                "References": message.reply_to_external_id,
+            }
 
         return await self._send_email(data, message.attachments)
 
@@ -105,7 +102,7 @@ class EmailService(BaseChannelService):
 
         data: dict[str, Any] = {
             "from": from_email or self._settings.email_from,
-            "to": to_email,
+            "to": [to_email],
             "subject": subject,
             "text": text_content,
         }
@@ -113,13 +110,16 @@ class EmailService(BaseChannelService):
         if html_content:
             data["html"] = html_content
 
+        headers: dict[str, str] = {}
         if reply_to_message_id:
-            data["h:In-Reply-To"] = reply_to_message_id
-            data["h:References"] = reply_to_message_id
+            headers["In-Reply-To"] = reply_to_message_id
+            headers["References"] = reply_to_message_id
 
         if custom_headers:
-            for key, value in custom_headers.items():
-                data[f"h:{key}"] = value
+            headers.update(custom_headers)
+
+        if headers:
+            data["headers"] = headers
 
         return await self._send_email(data, attachments)
 
@@ -128,37 +128,37 @@ class EmailService(BaseChannelService):
         data: dict[str, Any],
         attachments: list[Attachment] | None = None,
     ) -> SendResult:
-        """Internal method to send email via Mailgun."""
+        """Internal method to send email via Resend."""
         client = await self._get_client()
 
+        # Add attachments if present
+        if attachments:
+            data["attachments"] = [
+                {
+                    "filename": att.filename,
+                    "content": att.data.decode() if att.data else "",
+                }
+                for att in attachments
+                if att.data
+            ]
+
         try:
-            if attachments:
-                # Use multipart form for attachments
-                files = []
-                for att in attachments:
-                    if att.data:
-                        files.append(("attachment", (att.filename, att.data, att.content_type)))
-                response = await client.post(
-                    f"{self._api_url}/messages",
-                    data=data,
-                    files=files,
-                )
-            else:
-                response = await client.post(
-                    f"{self._api_url}/messages",
-                    data=data,
-                )
+            response = await client.post(
+                f"{self.RESEND_API_BASE}/emails",
+                json=data,
+            )
 
             response.raise_for_status()
             result = response.json()
 
+            logger.info("Email sent via Resend: %s", result.get("id"))
             return SendResult(
                 success=True,
                 external_id=result.get("id"),
             )
 
         except httpx.HTTPStatusError as e:
-            error_msg = f"Mailgun API error: {e.response.status_code}"
+            error_msg = f"Resend API error: {e.response.status_code}"
             try:
                 error_body = e.response.json()
                 error_msg = error_body.get("message", error_msg)
@@ -172,7 +172,7 @@ class EmailService(BaseChannelService):
             return SendResult(success=False, error=error_msg, retryable=retryable)
 
         except httpx.TimeoutException:
-            logger.error("Mailgun API timeout")
+            logger.error("Resend API timeout")
             return SendResult(success=False, error="Timeout", retryable=True)
 
         except Exception as e:
@@ -181,94 +181,43 @@ class EmailService(BaseChannelService):
 
     async def parse_webhook(self, payload: dict[str, Any]) -> InboundMessage:
         """
-        Parse Mailgun inbound webhook payload.
+        Parse Resend inbound webhook payload.
 
-        Mailgun sends form-encoded data with:
-        - sender: From email
-        - recipient: To email
-        - subject: Email subject
-        - body-plain: Plain text content
-        - body-html: HTML content (optional)
-        - stripped-text: Reply content without quoted text
-        - Message-Id: Original message ID
-        - timestamp: Unix timestamp
-        - token: Verification token
-        - signature: HMAC signature
+        Note: Resend webhooks are for delivery events, not inbound emails.
+        For inbound email handling, you'd need a different service or
+        forward to a different endpoint.
         """
-        # Use stripped-text if available (removes quoted replies)
-        content = payload.get("stripped-text") or payload.get("body-plain", "")
-        content = extract_reply_content(content)
-
-        # Parse timestamp
-        timestamp_str = payload.get("timestamp", "")
-        try:
-            timestamp = datetime.fromtimestamp(int(timestamp_str))
-        except (ValueError, TypeError):
-            timestamp = datetime.now(UTC)
-
-        # Parse attachments if present
-        attachments: list[Attachment] = []
-        attachment_count = int(payload.get("attachment-count", 0))
-        for i in range(1, attachment_count + 1):
-            att_data = payload.get(f"attachment-{i}")
-            if att_data and hasattr(att_data, "filename"):
-                attachments.append(
-                    Attachment(
-                        filename=att_data.filename,
-                        content_type=att_data.content_type or "application/octet-stream",
-                        data=att_data.file.read() if hasattr(att_data, "file") else None,
-                    )
-                )
-
+        # Basic implementation - Resend doesn't handle inbound emails the same way
         return InboundMessage(
-            external_id=payload.get("Message-Id", ""),
+            external_id=payload.get("email_id", ""),
             channel=Channel.EMAIL,
-            sender_identifier=payload.get("sender", ""),
-            content=content,
+            sender_identifier=payload.get("from", ""),
+            content=payload.get("text", ""),
             subject=payload.get("subject"),
-            attachments=attachments,
-            timestamp=timestamp,
+            attachments=[],
+            timestamp=datetime.now(UTC),
             raw_payload=payload,
         )
 
     def verify_signature(
         self,
-        payload: bytes,  # Not used for Mailgun
+        payload: bytes,
         signature: str,
         timestamp: str | None = None,
         token: str | None = None,
     ) -> bool:
         """
-        Verify Mailgun webhook signature.
+        Verify Resend webhook signature.
 
-        Mailgun uses: HMAC-SHA256(timestamp + token, signing_key)
+        Resend uses svix for webhooks - implementation depends on webhook setup.
+        For now, return True as placeholder.
         """
-        if not timestamp or not token:
-            return False
-
-        # Use webhook signing key if set, otherwise fall back to API key
-        signing_key = self._settings.mailgun_webhook_signing_key or self._settings.mailgun_api_key
-
-        expected = hmac.new(
-            signing_key.encode(),
-            f"{timestamp}{token}".encode(),
-            hashlib.sha256,
-        ).hexdigest()
-
-        return hmac.compare_digest(expected, signature)
+        # TODO: Implement proper svix signature verification if using webhooks
+        return True
 
     def verify_webhook_payload(self, payload: dict[str, Any]) -> bool:
-        """
-        Convenience method to verify webhook from parsed form data.
-
-        Args:
-            payload: Parsed form data from Mailgun webhook
-        """
-        timestamp = str(payload.get("timestamp", ""))
-        token = str(payload.get("token", ""))
-        signature = str(payload.get("signature", ""))
-
-        return self.verify_signature(b"", signature, timestamp, token)
+        """Verify webhook from parsed data."""
+        return True
 
     async def close(self) -> None:
         """Close HTTP client."""
