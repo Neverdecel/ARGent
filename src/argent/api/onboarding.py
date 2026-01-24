@@ -1,7 +1,6 @@
 """Onboarding API endpoints for player registration and verification."""
 
 import logging
-import re
 import secrets
 from datetime import UTC, datetime
 from typing import Annotated, Any
@@ -23,9 +22,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["onboarding"])
 
-# E.164 phone number format: +[country code][number]
-E164_PATTERN = re.compile(r"^\+[1-9]\d{1,14}$")
-
 # Cookie settings
 SESSION_COOKIE_NAME = "argent_session"
 SESSION_MAX_AGE = 60 * 60 * 24 * 7  # 7 days
@@ -38,34 +34,7 @@ class RegisterRequest(BaseModel):
     """Registration request body."""
 
     email: EmailStr
-    phone: str | None = None
     timezone: str = "UTC"
-    communication_mode: str = "immersive"  # 'immersive' or 'web_only'
-
-    @field_validator("phone")
-    @classmethod
-    def validate_phone(cls, v: str | None, info: Any) -> str | None:
-        """Validate phone is in E.164 format (optional for web_only mode)."""
-        mode = info.data.get("communication_mode", "immersive")
-
-        # For web_only mode, phone is optional
-        if mode == "web_only":
-            return v  # Can be None or any value
-
-        # For immersive mode, phone is required and must be valid
-        if not v:
-            raise ValueError("Phone number is required for immersive mode")
-        if not E164_PATTERN.match(v):
-            raise ValueError("Phone must be in E.164 format (e.g., +1234567890)")
-        return v
-
-    @field_validator("communication_mode")
-    @classmethod
-    def validate_communication_mode(cls, v: str) -> str:
-        """Validate communication mode."""
-        if v not in ("immersive", "web_only"):
-            raise ValueError("communication_mode must be 'immersive' or 'web_only'")
-        return v
 
 
 class PhoneVerifyRequest(BaseModel):
@@ -185,14 +154,13 @@ async def register(
     db: AsyncSession = Depends(get_db),
     verification_service: VerificationService = Depends(get_verification_service),
     email_service: EmailService = Depends(get_email_service),
-    sms_service: SMSService = Depends(get_sms_service),
     settings: Settings = Depends(get_settings),
 ) -> RegisterResponse:
     """
     Register a new player.
 
-    Creates player record, generates verification tokens, and sends
-    verification email and SMS.
+    Creates player record, generates email verification token, and sends
+    verification email.
     """
     # Check if email already exists - redirect to login
     existing = await db.execute(select(Player).where(Player.email == request.email))
@@ -203,51 +171,20 @@ async def register(
             redirect=f"/login?email={request.email}",
         )
 
-    # Check if phone already exists (skip for web-only mode)
-    if request.communication_mode != "web_only" and request.phone:
-        existing = await db.execute(select(Player).where(Player.phone == request.phone))
-        if existing.scalar_one_or_none():
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Phone number already registered",
-            )
-
-    # Check if web-only registration is allowed
-    is_web_only = request.communication_mode == "web_only"
-    if is_web_only and not settings.allow_web_only_registration:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Web-only registration is not enabled",
-        )
-
-    # Create player
+    # Create player (web_only mode, phone verification auto-done)
     player = Player(
         email=request.email,
-        phone=request.phone if not is_web_only else None,
+        phone=None,
         timezone=request.timezone,
-        email_verified=is_web_only,  # Auto-verify for web-only mode
-        phone_verified=is_web_only,  # Auto-verify for web-only mode
-        communication_mode=request.communication_mode,
+        email_verified=False,
+        phone_verified=True,  # No phone needed
+        communication_mode="web_only",
     )
     db.add(player)
     await db.flush()
 
-    if is_web_only:
-        # Web-only mode: skip real verification, redirect to start
-        _create_session_cookie(response, player.id, settings)
-        logger.info("Player registered (web-only mode): %s", player.id)
-
-        return RegisterResponse(
-            success=True,
-            message="Registration successful. Welcome to web-only mode.",
-            redirect="/start",
-        )
-
-    # Immersive mode: generate verification tokens and send real messages
+    # Generate email verification token and send
     email_token = await verification_service.create_email_token(player.id)
-    phone_code = await verification_service.create_phone_code(player.id)
-
-    # Send verification email
     verification_url = f"{settings.base_url}/api/verify/email/{email_token}"
     email_sent = await _send_verification_email(
         email_service=email_service,
@@ -258,17 +195,6 @@ async def register(
     if not email_sent:
         logger.warning("Failed to send verification email to %s", request.email)
 
-    # Send verification SMS (phone is guaranteed non-None in immersive mode)
-    assert request.phone is not None
-    sms_sent = await _send_verification_sms(
-        sms_service=sms_service,
-        to_phone=request.phone,
-        code=phone_code,
-        settings=settings,
-    )
-    if not sms_sent:
-        logger.warning("Failed to send verification SMS to %s", request.phone)
-
     # Set session cookie
     _create_session_cookie(response, player.id, settings)
 
@@ -276,7 +202,7 @@ async def register(
 
     return RegisterResponse(
         success=True,
-        message="Registration successful. Please check your email and phone.",
+        message="Check your email to verify.",
         redirect="/verify",
     )
 
@@ -613,36 +539,63 @@ async def _send_verification_email(
         logger.info("Email disabled - skipping verification email")
         return True
 
-    subject = "Verify your identity"
-    text_content = f"""You requested access to ARGent.
+    subject = "Verify your email"
+    text_content = f"""ARGent
 
-Click the link below to verify your email address:
+Verify your email to continue.
 
 {verification_url}
 
 This link expires in 24 hours.
 
 If you did not request this, ignore this email.
-
----
-ARGent
 """
     html_content = f"""<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Georgia, serif; color: #e0e0e0; background: #1a1a1a; padding: 20px;">
-<p>You requested access to ARGent.</p>
-<p>Click the button below to verify your email address:</p>
-<p style="margin: 30px 0;">
-    <a href="{verification_url}"
-       style="background: #4a4a4a; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px;">
-       Verify Email
-    </a>
-</p>
-<p style="color: #888; font-size: 14px;">This link expires in 24 hours.</p>
-<p style="color: #888; font-size: 14px;">If you did not request this, ignore this email.</p>
-<hr style="border: none; border-top: 1px solid #333; margin: 30px 0;">
-<p style="color: #666; font-size: 12px;">ARGent</p>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: 'Courier New', monospace;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #1a1a1a; border: 1px solid #333; border-radius: 4px;">
+                    <tr>
+                        <td style="padding: 40px 30px; text-align: center;">
+                            <!-- Logo -->
+                            <p style="margin: 0 0 30px 0; font-size: 28px; letter-spacing: 2px;">
+                                <span style="color: #e0e0e0;">ARG</span><span style="color: #00ff88;">ent</span>
+                            </p>
+
+                            <!-- Main text -->
+                            <p style="margin: 0 0 30px 0; color: #a0a0a0; font-size: 14px; line-height: 1.6;">
+                                Verify your email to continue.
+                            </p>
+
+                            <!-- Button -->
+                            <a href="{verification_url}"
+                               style="display: inline-block; padding: 14px 32px; background-color: #2a2a2a; color: #e0e0e0; text-decoration: none; border: 1px solid #333; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 14px;">
+                                Verify Email
+                            </a>
+
+                            <!-- Expiry note -->
+                            <p style="margin: 30px 0 0 0; color: #606060; font-size: 12px;">
+                                This link expires in 24 hours.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 30px; border-top: 1px solid #333; text-align: center;">
+                            <p style="margin: 0; color: #606060; font-size: 11px;">
+                                If you did not request this, ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
 """

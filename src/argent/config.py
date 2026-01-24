@@ -34,11 +34,9 @@ class Settings(BaseSettings):
     # Agent settings
     agent_response_enabled: bool = True  # Toggle agent responses (disable for testing)
 
-    # Email (Mailgun)
-    mailgun_api_key: str = ""
-    mailgun_domain: str = ""
-    mailgun_webhook_signing_key: str = ""  # For webhook verification (may differ from API key)
-    email_from: str = "noreply@argent.game"
+    # Email (Resend)
+    resend_api_key: str = ""
+    email_from: str = "onboarding@resend.dev"  # Use verified domain in prod: noreply@argent.neverdecel.com
     email_enabled: bool = True
 
     # SMS (Twilio)

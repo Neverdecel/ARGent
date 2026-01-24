@@ -30,8 +30,8 @@ def get_sms_service() -> SMSService:
     return SMSService()
 
 
-@router.post("/mailgun")
-async def mailgun_webhook(
+@router.post("/email")
+async def email_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
@@ -39,60 +39,16 @@ async def mailgun_webhook(
     settings: Settings = Depends(get_settings),
 ) -> dict[str, str]:
     """
-    Handle inbound email from Mailgun.
+    Handle inbound email webhook.
 
-    Mailgun sends form-encoded POST with signature verification.
+    Note: Currently using web-only mode, so inbound emails are not processed.
+    This endpoint is a placeholder for future immersive mode support.
     """
     if not settings.email_enabled:
         return {"status": "disabled"}
 
-    # Get form data
-    form_data = await request.form()
-    payload = dict(form_data.items())
-
-    # Verify signature
-    if not email_service.verify_webhook_payload(payload):
-        logger.warning("Invalid Mailgun webhook signature")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid signature",
-        )
-
-    # Parse inbound message
-    try:
-        inbound = await email_service.parse_webhook(payload)
-    except Exception as e:
-        logger.exception("Failed to parse Mailgun webhook")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid payload: {e}",
-        ) from e
-
-    # Find player by email
-    player = await _find_player_by_email(db, inbound.sender_identifier)
-    if not player:
-        logger.info("Email from unknown sender: %s", inbound.sender_identifier)
-        # Return 200 to prevent Mailgun retries and enumeration
-        return {"status": "ignored", "reason": "unknown_sender"}
-
-    # Create message metadata record
-    message = await _create_message_record(
-        db=db,
-        player_id=player.id,
-        channel=Channel.EMAIL,
-        direction=Direction.INBOUND,
-        external_id=inbound.external_id,
-    )
-
-    # Queue background processing (agent response)
-    background_tasks.add_task(
-        _process_inbound_message,
-        message_id=message.id,
-        content=inbound.content,
-        channel=Channel.EMAIL,
-    )
-
-    return {"status": "received", "message_id": str(message.id)}
+    # Web-only mode doesn't use email webhooks
+    return {"status": "ignored", "reason": "web_only_mode"}
 
 
 @router.post("/twilio")
