@@ -8,66 +8,191 @@
         <span class="logo-text">ARG</span><span class="logo-accent">ent</span>
     </div>
 
-    <p class="tagline">Something is waiting for you.</p>
+    <!-- Email Entry State -->
+    <div id="email-state">
+        <p class="tagline">Something is waiting for you.</p>
 
-    <form id="enter-form" class="form">
-        <div class="form-group">
-            <input type="email" id="email" name="email" required
-                   placeholder="your@email.com"
-                   autocomplete="email">
+        <form id="enter-form" class="form">
+            <div class="form-group">
+                <input type="email" id="email" name="email" required
+                       placeholder="your@email.com"
+                       autocomplete="email">
+            </div>
+            <button type="submit" class="btn btn-primary">Enter</button>
+            <div id="form-error" class="alert alert-error" style="display: none;"></div>
+        </form>
+
+        <p class="disclaimer">
+            By entering, you consent to receiving communications<br>
+            from AI entities through various channels.
+        </p>
+
+        <p class="back-link">New here? <a href="/register">Register</a></p>
+    </div>
+
+    <!-- Check Email State -->
+    <div id="check-email-state" style="display: none;">
+        <p class="tagline">Check your email</p>
+
+        <div class="check-email-message">
+            <p>We sent a login link to <strong id="sent-email"></strong></p>
+            <p class="hint">The link expires in 15 minutes.</p>
         </div>
-        <button type="submit" class="btn btn-primary">Enter</button>
-        <div id="form-error" class="alert alert-error" style="display: none;"></div>
-    </form>
 
-    <p class="disclaimer">
-        By entering, you consent to receiving communications<br>
-        from AI entities through various channels.
-    </p>
+        <div id="resend-section">
+            <p class="resend-text">Didn't receive it?</p>
+            <button id="resend-btn" class="btn btn-secondary" disabled>
+                Resend in <span id="countdown">60</span>s
+            </button>
+        </div>
+
+        <div id="resend-success" class="alert alert-success" style="display: none;">
+            New link sent!
+        </div>
+
+        <p class="back-link">
+            <a href="#" id="use-different-email">Use a different email</a>
+        </p>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.getElementById('enter-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const email = document.getElementById('email').value;
+(function() {
+    const emailState = document.getElementById('email-state');
+    const checkEmailState = document.getElementById('check-email-state');
+    const enterForm = document.getElementById('enter-form');
     const errorDiv = document.getElementById('form-error');
-    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const sentEmailSpan = document.getElementById('sent-email');
+    const resendBtn = document.getElementById('resend-btn');
+    const resendSuccess = document.getElementById('resend-success');
+    const useDifferentEmail = document.getElementById('use-different-email');
 
-    errorDiv.style.display = 'none';
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Entering...';
+    let countdownInterval = null;
+    let currentEmail = '';
 
-    try {
-        // Try to login first
-        const response = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email }),
-        });
+    function showEmailState() {
+        emailState.style.display = 'block';
+        checkEmailState.style.display = 'none';
+        clearInterval(countdownInterval);
+    }
 
-        const data = await response.json();
+    function showCheckEmailState(email) {
+        emailState.style.display = 'none';
+        checkEmailState.style.display = 'block';
+        sentEmailSpan.textContent = email;
+        currentEmail = email;
+        startCountdown();
+    }
 
-        if (response.ok) {
-            // Existing user - redirect
-            window.location.href = data.redirect;
-        } else if (response.status === 404) {
-            // New user - go to register
-            window.location.href = '/register?email=' + encodeURIComponent(email);
-        } else {
-            errorDiv.textContent = data.detail || 'Something went wrong';
+    function startCountdown() {
+        let seconds = 60;
+        resendBtn.disabled = true;
+        resendBtn.innerHTML = 'Resend in <span id="countdown">' + seconds + '</span>s';
+        resendSuccess.style.display = 'none';
+
+        clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
+            seconds--;
+            const span = document.getElementById('countdown');
+            if (span) span.textContent = seconds;
+
+            if (seconds <= 0) {
+                clearInterval(countdownInterval);
+                resendBtn.disabled = false;
+                resendBtn.textContent = 'Resend link';
+            }
+        }, 1000);
+    }
+
+    enterForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const submitBtn = enterForm.querySelector('button[type="submit"]');
+
+        errorDiv.style.display = 'none';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Entering...';
+
+        try {
+            // Try to login first (sends magic link for existing users)
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Magic link sent (or would be if account exists) - show check email state
+                showCheckEmailState(email);
+            } else {
+                errorDiv.textContent = data.detail || 'Something went wrong';
+                errorDiv.style.display = 'block';
+            }
+        } catch (err) {
+            errorDiv.textContent = 'Network error. Please try again.';
             errorDiv.style.display = 'block';
+        } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Enter';
         }
-    } catch (err) {
-        errorDiv.textContent = 'Network error. Please try again.';
-        errorDiv.style.display = 'block';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Enter';
-    }
-});
+    });
+
+    resendBtn.addEventListener('click', async () => {
+        resendBtn.disabled = true;
+        resendBtn.textContent = 'Sending...';
+        resendSuccess.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: currentEmail }),
+            });
+
+            if (response.ok) {
+                resendSuccess.style.display = 'block';
+                startCountdown();
+            } else {
+                const data = await response.json();
+                if (response.status === 429) {
+                    const match = data.detail.match(/(\d+) seconds/);
+                    if (match) {
+                        let seconds = parseInt(match[1]);
+                        resendBtn.innerHTML = 'Resend in <span id="countdown">' + seconds + '</span>s';
+                        clearInterval(countdownInterval);
+                        countdownInterval = setInterval(() => {
+                            seconds--;
+                            const span = document.getElementById('countdown');
+                            if (span) span.textContent = seconds;
+                            if (seconds <= 0) {
+                                clearInterval(countdownInterval);
+                                resendBtn.disabled = false;
+                                resendBtn.textContent = 'Resend link';
+                            }
+                        }, 1000);
+                    }
+                } else {
+                    resendBtn.textContent = 'Resend link';
+                    resendBtn.disabled = false;
+                }
+            }
+        } catch (err) {
+            resendBtn.textContent = 'Resend link';
+            resendBtn.disabled = false;
+        }
+    });
+
+    useDifferentEmail.addEventListener('click', (e) => {
+        e.preventDefault();
+        showEmailState();
+        document.getElementById('email').value = '';
+        document.getElementById('email').focus();
+    });
+})();
 </script>
 {% endblock %}
