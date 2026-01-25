@@ -20,6 +20,7 @@ class TokenType(str, Enum):
 
     EMAIL = "email"
     PHONE = "phone"
+    MAGIC_LINK = "magic_link"
 
 
 class VerificationToken(Base, UUIDMixin, TimestampMixin):
