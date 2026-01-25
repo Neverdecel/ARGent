@@ -278,17 +278,17 @@ document.getElementById('reply-form').addEventListener('submit', async function(
         });
 
         if (response.ok) {
-            // Hide reply form and show typing indicator
+            // Hide reply form
             hideReplyForm();
             submitBtn.disabled = false;
             submitBtn.textContent = 'Send';
 
-            // Show typing indicator after a short delay
+            // Show typing indicator while waiting for response
             setTimeout(() => {
                 showTypingIndicator();
-            }, 500);
+            }, 300);
 
-            // Start fast polling for response
+            // Start fast polling - will pick up both sent message and agent response
             startFastPolling();
         } else {
             const error = await response.json();
@@ -306,7 +306,16 @@ document.getElementById('reply-form').addEventListener('submit', async function(
 // Polling for new messages
 let pollInterval = null;
 let fastPollCount = 0;
-let messageCount = document.querySelectorAll('.thread-email').length;
+
+// Track existing message IDs (messages are displayed newest-first)
+function getExistingMessageIds() {
+    const ids = new Set();
+    document.querySelectorAll('.thread-email').forEach(el => {
+        const id = el.dataset.messageId;
+        if (id) ids.add(id);
+    });
+    return ids;
+}
 
 function startFastPolling() {
     fastPollCount = 15;
@@ -322,6 +331,8 @@ function checkForNewMessages() {
         return;
     }
 
+    const existingIds = getExistingMessageIds();
+    const existingCount = existingIds.size;
     const url = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_t=' + Date.now();
     fetch(url, {
         headers: { 'Accept': 'text/html' },
@@ -331,39 +342,24 @@ function checkForNewMessages() {
         .then(html => {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
+            const newThreadMessages = doc.getElementById('thread-messages');
             const newEmails = doc.querySelectorAll('.thread-email');
 
-            if (newEmails.length > messageCount) {
-                // Hide typing indicator - response arrived
+            // Check if there are new messages by comparing IDs
+            let hasNewMessages = false;
+            newEmails.forEach(email => {
+                const id = email.dataset.messageId;
+                if (id && !existingIds.has(id)) {
+                    hasNewMessages = true;
+                }
+            });
+
+            if (hasNewMessages) {
+                // Hide typing indicator and reload the page to show new messages
+                // This ensures correct rendering without duplication issues
                 hideTypingIndicator();
-
-                // Add new emails dynamically
-                for (let i = messageCount; i < newEmails.length; i++) {
-                    const newEmail = newEmails[i].cloneNode(true);
-                    newEmail.style.animation = 'message-in 0.3s ease-out';
-
-                    // Insert before typing indicator
-                    threadMessages.insertBefore(newEmail, typingIndicator);
-
-                    // Initialize expand icon for new email
-                    const icon = newEmail.querySelector('.email-expand-icon');
-                    if (icon) {
-                        icon.textContent = newEmail.classList.contains('expanded') ? '▲' : '▼';
-                    }
-                }
-                messageCount = newEmails.length;
-
-                // Update thread count in header
-                const countEl = document.querySelector('.thread-count');
-                if (countEl) {
-                    countEl.textContent = `${messageCount} message${messageCount !== 1 ? 's' : ''}`;
-                }
-
-                // Scroll to show new message
-                const lastEmail = threadMessages.querySelector('.thread-email:last-of-type');
-                if (lastEmail) {
-                    lastEmail.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                window.location.reload();
+                return;
             }
 
             // Slow down polling after fast period
