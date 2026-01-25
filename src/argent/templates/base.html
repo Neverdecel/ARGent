@@ -4,6 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}ARGent{% endblock %}</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="{% block meta_description %}ARGent - An AI-driven alternate reality game. Something is waiting for you.{% endblock %}">
+    <link rel="canonical" href="https://argent.neverdecel.com{{ request.url.path }}">
+
+    <!-- Open Graph Tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ARGent">
+    <meta property="og:title" content="{% block og_title %}ARGent - Something is waiting for you{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}An AI-driven alternate reality game. Enter at your own risk.{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}https://argent.neverdecel.com/static/og-image.png{% endblock %}">
+    <meta property="og:url" content="https://argent.neverdecel.com{{ request.url.path }}">
+
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}ARGent - Something is waiting for you{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}An AI-driven alternate reality game. Enter at your own risk.{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}https://argent.neverdecel.com/static/og-image.png{% endblock %}">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+
     <link rel="stylesheet" href="/static/style.css?v=5">
     {% block head %}{% endblock %}
 </head>
