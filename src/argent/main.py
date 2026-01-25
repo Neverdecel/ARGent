@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from argent.api.evidence import router as evidence_router
@@ -52,6 +52,28 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 async def robots_txt() -> FileResponse:
     """Serve robots.txt to prevent indexing of secret pages."""
     return FileResponse(STATIC_DIR / "robots.txt", media_type="text/plain")
+
+
+# Serve sitemap.xml for search engines
+@app.get("/sitemap.xml", include_in_schema=False)
+async def sitemap_xml() -> Response:
+    """Serve sitemap.xml with public pages."""
+    sitemap = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://argent.neverdecel.com/</loc>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>https://argent.neverdecel.com/register</loc>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://argent.neverdecel.com/login</loc>
+        <priority>0.5</priority>
+    </url>
+</urlset>"""
+    return Response(content=sitemap, media_type="application/xml")
 
 
 # Include routers

@@ -1,8 +1,17 @@
 # ARGent - Robots.txt
-# Prevent indexing of evidence dashboard (secret content)
+# Prevent indexing of private/game content
 
 User-agent: *
 Disallow: /access/
+Disallow: /verify/
+Disallow: /start
+Disallow: /hub
+Disallow: /inbox/
+Disallow: /text/
+Disallow: /api/
 
 # Allow everything else
 Allow: /
+
+# Sitemap
+Sitemap: https://argent.neverdecel.com/sitemap.xml
