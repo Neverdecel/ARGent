@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argent-config
+  labels:
+    app: argent
+data:
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  BASE_URL: "https://argent.neverdecel.com"
+  EMAIL_ENABLED: "true"
+  SMS_ENABLED: "false"
+  WEB_INBOX_ENABLED: "true"
+  ALLOW_WEB_ONLY_REGISTRATION: "true"

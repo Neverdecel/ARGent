@@ -73,3 +73,9 @@ logs/
 
 # Playwright MCP screenshots
 .playwright-mcp/
+
+# Kubernetes secrets (plaintext) - NEVER commit
+infrastructure/k8s/**/secrets.yaml
+infrastructure/k8s/**/ghcr-creds.yaml
+# Keep templates for reference
+!infrastructure/k8s/**/*.tpl

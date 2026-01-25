@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: argent-prd
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - sealed-secrets.yaml
+  - sealed-image-pull-secret.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - image-repository.yaml
+  - image-policy.yaml
+
+commonLabels:
+  app: argent
+  environment: prd

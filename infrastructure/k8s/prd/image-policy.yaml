@@ -1,0 +1,13 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: argent
+  namespace: argent-prd
+spec:
+  imageRepositoryRef:
+    name: argent
+  policy:
+    alphabetical:
+      order: asc
+  filterTags:
+    pattern: '^main-\d{8}-\d{6}-[a-f0-9]+$'
