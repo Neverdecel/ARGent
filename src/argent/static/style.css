@@ -230,6 +230,40 @@ a:hover {
     color: var(--text-muted);
 }
 
+/* Login page */
+.login {
+    padding-top: 2rem;
+}
+
+.check-email-message {
+    background-color: var(--bg-secondary);
+    padding: 2rem;
+    border-radius: 4px;
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.check-email-message p {
+    margin-bottom: 0.5rem;
+}
+
+.check-email-message .hint {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+#resend-section {
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.resend-text {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+}
+
 /* Mode toggle */
 .mode-toggle {
     margin-top: 1.5rem;

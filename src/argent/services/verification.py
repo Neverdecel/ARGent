@@ -27,6 +27,11 @@ PHONE_CODE_LENGTH = 6
 PHONE_CODE_EXPIRY_MINUTES = 10
 PHONE_RESEND_COOLDOWN_SECONDS = 60
 
+# Magic link specifications
+MAGIC_LINK_TOKEN_BYTES = 32
+MAGIC_LINK_EXPIRY_MINUTES = 15
+MAGIC_LINK_RATE_LIMIT_SECONDS = 60
+
 
 def _hash_token(token: str) -> str:
     """Hash a token using SHA256."""
@@ -206,6 +211,93 @@ class VerificationService:
             )
         )
         return len(result.scalars().all())
+
+    async def create_magic_link_token(self, player_id: UUID) -> str:
+        """Create a new magic link token for passwordless login.
+
+        Returns the raw token (to be sent in email). The hashed version is stored.
+        """
+        # Invalidate any existing magic link tokens for this player
+        await self._invalidate_tokens(player_id, TokenType.MAGIC_LINK)
+
+        # Generate new token (same format as email tokens)
+        raw_token = secrets.token_urlsafe(MAGIC_LINK_TOKEN_BYTES)
+        hashed_token = _hash_token(raw_token)
+
+        # Calculate expiry (shorter than email verification)
+        expires_at = datetime.now(UTC) + timedelta(minutes=MAGIC_LINK_EXPIRY_MINUTES)
+
+        # Create token record
+        token = VerificationToken(
+            player_id=player_id,
+            token_type=TokenType.MAGIC_LINK.value,
+            token_value=hashed_token,
+            expires_at=expires_at,
+        )
+        self.db.add(token)
+        await self.db.flush()
+
+        return raw_token
+
+    async def verify_magic_link_token(self, raw_token: str) -> UUID | None:
+        """Verify a magic link token and return the player_id if valid.
+
+        Returns None if token is invalid, expired, or already used.
+        Consumes the token on success (single-use).
+        """
+        hashed_token = _hash_token(raw_token)
+        now = datetime.now(UTC)
+
+        # Find valid token
+        result = await self.db.execute(
+            select(VerificationToken).where(
+                VerificationToken.token_type == TokenType.MAGIC_LINK.value,
+                VerificationToken.token_value == hashed_token,
+                VerificationToken.used_at.is_(None),
+                VerificationToken.expires_at > now,
+            )
+        )
+        token = result.scalar_one_or_none()
+
+        if token is None:
+            return None
+
+        # Mark as used (single-use)
+        token.used_at = now
+        await self.db.flush()
+
+        return token.player_id
+
+    async def can_request_magic_link(self, player_id: UUID) -> tuple[bool, int]:
+        """Check if player can request a new magic link.
+
+        Returns (can_request, seconds_until_allowed).
+        Rate limited to one request per MAGIC_LINK_RATE_LIMIT_SECONDS.
+        """
+        now = datetime.now(UTC)
+        cooldown_cutoff = now - timedelta(seconds=MAGIC_LINK_RATE_LIMIT_SECONDS)
+
+        # Find most recent magic link token for this player
+        result = await self.db.execute(
+            select(VerificationToken)
+            .where(
+                VerificationToken.player_id == player_id,
+                VerificationToken.token_type == TokenType.MAGIC_LINK.value,
+            )
+            .order_by(VerificationToken.created_at.desc())
+            .limit(1)
+        )
+        token = result.scalar_one_or_none()
+
+        if token is None:
+            return True, 0
+
+        if token.created_at > cooldown_cutoff:
+            # Still in cooldown
+            seconds_remaining = int((token.created_at - cooldown_cutoff).total_seconds())
+            return False, seconds_remaining
+
+        return True, 0
 
     async def _invalidate_tokens(self, player_id: UUID, token_type: TokenType) -> int:
         """Invalidate all active tokens of a type for a player.

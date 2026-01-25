@@ -87,7 +87,6 @@ class LoginResponse(BaseModel):
 
     success: bool
     message: str
-    redirect: str
 
 
 # Session helpers
@@ -210,36 +209,95 @@ async def register(
 @router.post("/login", response_model=LoginResponse)
 async def login(
     request: LoginRequest,
-    response: Response,
     db: AsyncSession = Depends(get_db),
+    verification_service: VerificationService = Depends(get_verification_service),
+    email_service: EmailService = Depends(get_email_service),
     settings: Settings = Depends(get_settings),
 ) -> LoginResponse:
     """
-    Login an existing player by email.
+    Request a magic link to login.
 
-    Creates a session and redirects to appropriate page based on player state.
+    Sends a magic link email if the account exists.
+    Returns the same response regardless of whether email exists (prevents enumeration).
     """
     # Find player by email
     result = await db.execute(select(Player).where(Player.email == request.email))
     player = result.scalar_one_or_none()
 
+    # Always return success to prevent email enumeration
+    success_message = "If an account exists with this email, you'll receive a login link shortly."
+
     if not player:
+        # No account - return success anyway to prevent enumeration
+        logger.info("Login attempt for non-existent email: %s", request.email)
+        return LoginResponse(success=True, message=success_message)
+
+    # Check rate limit
+    can_request, seconds_remaining = await verification_service.can_request_magic_link(player.id)
+    if not can_request:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Email not found. Please register first.",
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Please wait {seconds_remaining} seconds before requesting another login link.",
         )
 
-    # Create session
-    _create_session_cookie(response, player.id, settings)
-    logger.info("Player logged in: %s", player.id)
+    # Generate magic link token
+    magic_token = await verification_service.create_magic_link_token(player.id)
+    magic_link_url = f"{settings.base_url}/api/auth/magic/{magic_token}"
+
+    # Send magic link email
+    email_sent = await _send_magic_link_email(
+        email_service=email_service,
+        to_email=request.email,
+        magic_link_url=magic_link_url,
+        settings=settings,
+    )
+
+    if not email_sent:
+        logger.warning("Failed to send magic link email to %s", request.email)
+
+    logger.info("Magic link requested for player: %s", player.id)
+
+    return LoginResponse(success=True, message=success_message)
+
+
+@router.get("/auth/magic/{token}")
+async def verify_magic_link(
+    token: str,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    verification_service: VerificationService = Depends(get_verification_service),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    """
+    Verify magic link token and create session.
+
+    Redirects to appropriate page on success, login page with error on failure.
+    """
+    player_id = await verification_service.verify_magic_link_token(token)
+
+    if player_id is None:
+        # Invalid or expired token - redirect to login with error
+        response.status_code = status.HTTP_303_SEE_OTHER
+        response.headers["Location"] = "/login?error=invalid_magic_link"
+        return response
+
+    # Get player to determine redirect
+    result = await db.execute(select(Player).where(Player.id == player_id))
+    player = result.scalar_one_or_none()
+
+    if not player:
+        response.status_code = status.HTTP_303_SEE_OTHER
+        response.headers["Location"] = "/login?error=invalid_magic_link"
+        return response
+
+    # Create session cookie
+    _create_session_cookie(response, player_id, settings)
+    logger.info("Player logged in via magic link: %s", player_id)
 
     # Determine redirect based on player state
     if player.game_started_at:
         # Game already started
-        if player.communication_mode == "web_only":
-            redirect = "/hub"
-        else:
-            redirect = "/start"
+        redirect = "/hub" if player.communication_mode == "web_only" else "/start"
     elif player.email_verified and player.phone_verified:
         # Verified but not started
         redirect = "/start"
@@ -247,11 +305,9 @@ async def login(
         # Needs verification
         redirect = "/verify"
 
-    return LoginResponse(
-        success=True,
-        message="Welcome back!",
-        redirect=redirect,
-    )
+    response.status_code = status.HTTP_303_SEE_OTHER
+    response.headers["Location"] = redirect
+    return response
 
 
 @router.get("/verify/email/{token}")
@@ -582,6 +638,88 @@ If you did not request this, ignore this email.
                             <!-- Expiry note -->
                             <p style="margin: 30px 0 0 0; color: #606060; font-size: 12px;">
                                 This link expires in 24 hours.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 30px; border-top: 1px solid #333; text-align: center;">
+                            <p style="margin: 0; color: #606060; font-size: 11px;">
+                                If you did not request this, ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+    result = await email_service.send_raw(
+        to_email=to_email,
+        subject=subject,
+        text_content=text_content,
+        html_content=html_content,
+        from_email=settings.email_from,
+    )
+    return result.success
+
+
+async def _send_magic_link_email(
+    email_service: EmailService,
+    to_email: str,
+    magic_link_url: str,
+    settings: Settings,
+) -> bool:
+    """Send magic link login email."""
+    if not settings.email_enabled:
+        logger.info("Email disabled - skipping magic link email")
+        return True
+
+    subject = "Your login link"
+    text_content = f"""ARGent
+
+Sign in to your account.
+
+{magic_link_url}
+
+This link expires in 15 minutes and can only be used once.
+
+If you did not request this, ignore this email.
+"""
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: 'Courier New', monospace;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background-color: #1a1a1a; border: 1px solid #333; border-radius: 4px;">
+                    <tr>
+                        <td style="padding: 40px 30px; text-align: center;">
+                            <!-- Logo -->
+                            <p style="margin: 0 0 30px 0; font-size: 28px; letter-spacing: 2px;">
+                                <span style="color: #e0e0e0;">ARG</span><span style="color: #00ff88;">ent</span>
+                            </p>
+
+                            <!-- Main text -->
+                            <p style="margin: 0 0 30px 0; color: #a0a0a0; font-size: 14px; line-height: 1.6;">
+                                Sign in to your account.
+                            </p>
+
+                            <!-- Button -->
+                            <a href="{magic_link_url}"
+                               style="display: inline-block; padding: 14px 32px; background-color: #2a2a2a; color: #e0e0e0; text-decoration: none; border: 1px solid #333; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 14px;">
+                                Sign In
+                            </a>
+
+                            <!-- Expiry note -->
+                            <p style="margin: 30px 0 0 0; color: #606060; font-size: 12px;">
+                                This link expires in 15 minutes and can only be used once.
                             </p>
                         </td>
                     </tr>
